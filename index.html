@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MetaEcon — Systematic Review Workbench</title>
+<style>
+/* ================= tokens ================= */
+:root{
+  --ground:#F7F7F4; --surface:#FFFFFF; --surface2:#F0F1EC; --ink:#20262C;
+  --ink2:#5A6470; --ink3:#8B94A0; --border:#E3E4DE; --border2:#D2D4CC;
+  --accent:#088872; --accent-ink:#FFFFFF; --accent-soft:#E3F0EE;
+  --good:#256D3A; --good-soft:#E4F0E7; --warn:#96690F; --warn-soft:#F6EEDC;
+  --crit:#A63A2E; --crit-soft:#F7E6E3; --shadow:0 1px 3px rgba(30,38,44,.08),0 4px 14px rgba(30,38,44,.05);
+  --mono:'Cascadia Code',Consolas,'SF Mono',ui-monospace,monospace;
+  --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+  --sans:system-ui,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ground:#13181D; --surface:#1B222A; --surface2:#222B34; --ink:#E8EAEC;
+    --ink2:#9AA5B1; --ink3:#6C7683; --border:#2A333D; --border2:#37424E;
+    --accent:#2FA893; --accent-ink:#0D1A18; --accent-soft:#1C3833;
+    --good:#5BBF7A; --good-soft:#1E3326; --warn:#D9A62E; --warn-soft:#3A3017;
+    --crit:#E07B6E; --crit-soft:#3D211D; --shadow:0 1px 3px rgba(0,0,0,.35),0 4px 14px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#13181D; --surface:#1B222A; --surface2:#222B34; --ink:#E8EAEC;
+  --ink2:#9AA5B1; --ink3:#6C7683; --border:#2A333D; --border2:#37424E;
+  --accent:#2FA893; --accent-ink:#0D1A18; --accent-soft:#1C3833;
+  --good:#5BBF7A; --good-soft:#1E3326; --warn:#D9A62E; --warn-soft:#3A3017;
+  --crit:#E07B6E; --crit-soft:#3D211D; --shadow:0 1px 3px rgba(0,0,0,.35),0 4px 14px rgba(0,0,0,.25);
+}
+:root[data-theme="light"]{
+  --ground:#F7F7F4; --surface:#FFFFFF; --surface2:#F0F1EC; --ink:#20262C;
+  --ink2:#5A6470; --ink3:#8B94A0; --border:#E3E4DE; --border2:#D2D4CC;
+  --accent:#088872; --accent-ink:#FFFFFF; --accent-soft:#E3F0EE;
+  --good:#256D3A; --good-soft:#E4F0E7; --warn:#96690F; --warn-soft:#F6EEDC;
+  --crit:#A63A2E; --crit-soft:#F7E6E3; --shadow:0 1px 3px rgba(30,38,44,.08),0 4px 14px rgba(30,38,44,.05);
+}
+/* ================= base ================= */
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--ground);color:var(--ink);font:14px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--serif);font-weight:600;text-wrap:balance;margin:0}
+button{font:inherit;cursor:pointer;border-radius:6px;border:1px solid var(--border2);background:var(--surface);color:var(--ink);padding:6px 12px}
+button:hover{border-color:var(--accent)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+button.primary:hover{filter:brightness(1.07)}
+button.quiet{border-color:transparent;background:transparent;color:var(--ink2)}
+button.quiet:hover{color:var(--accent);border-color:transparent}
+button:disabled{opacity:.45;cursor:not-allowed}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--border2);border-radius:6px;padding:6px 9px}
+textarea{resize:vertical}
+label{font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px;letter-spacing:.02em}
+table{border-collapse:collapse;width:100%}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border2);white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px}
+a{color:var(--accent)}
+/* ================= layout ================= */
+#topbar{display:flex;align-items:center;gap:14px;padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
+#brand{font-family:var(--serif);font-size:19px;font-weight:700;letter-spacing:.01em}
+#brand small{color:var(--accent);font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;display:block;margin-top:-3px}
+#projname{border:1px solid transparent;background:transparent;font-size:14px;font-weight:600;min-width:180px;flex:0 1 320px}
+#projname:hover{border-color:var(--border2)}
+#prisma-mini{display:flex;gap:10px;margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ink2);flex-wrap:wrap}
+#prisma-mini b{color:var(--ink)}
+#appwrap{display:flex;min-height:calc(100vh - 54px)}
+#rail{width:218px;flex:0 0 218px;padding:16px 10px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:2px}
+.step{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;border:1px solid transparent;background:transparent;text-align:left;width:100%}
+.step .n{font-family:var(--mono);font-size:11px;color:var(--ink3);width:16px}
+.step .badge{margin-left:auto;font-family:var(--mono);font-size:11px;background:var(--surface2);border-radius:9px;padding:1px 7px;color:var(--ink2)}
+.step.active{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+.step.active .n{color:var(--accent)}
+#railfoot{margin-top:auto;padding:10px}
+#valcard{border:1px solid var(--border2);border-radius:9px;padding:10px 12px;background:var(--surface);font-size:12px;box-shadow:var(--shadow)}
+#valcard .vnum{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--accent)}
+#main{flex:1;padding:22px 26px;max-width:1180px;min-width:0}
+.stage{display:none}
+.stage.active{display:block}
+.stage>header{margin-bottom:16px}
+.stage>header h2{font-size:22px}
+.stage>header p{color:var(--ink2);margin:4px 0 0;max-width:68ch}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;box-shadow:var(--shadow);margin-bottom:16px}
+.card h3{font-size:15px;margin-bottom:10px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.field{margin-bottom:12px}
+.scrollx{overflow-x:auto}
+.muted{color:var(--ink2)} .tiny{font-size:12px}
+/* chips */
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;border-radius:20px;padding:2px 10px;border:1px solid var(--border2);background:var(--surface2)}
+.chip.good{background:var(--good-soft);color:var(--good);border-color:transparent}
+.chip.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.chip.crit{background:var(--crit-soft);color:var(--crit);border-color:transparent}
+.chip.acc{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.chip-toggle{cursor:pointer;user-select:none}
+.chip-toggle.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+/* tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border2);margin-bottom:14px}
+.tab{border:none;background:none;padding:8px 14px;color:var(--ink2);border-bottom:2px solid transparent;border-radius:0}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+/* screening cards */
+.rec{border:1px solid var(--border);border-radius:9px;padding:12px 14px;margin-bottom:10px;background:var(--surface)}
+.rec .t{font-weight:600;font-size:14px}
+.rec .t a{color:inherit;text-decoration:none;border-bottom:1px dotted var(--border2)}
+.rec .t a:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.rec .meta{color:var(--ink2);font-size:12px;margin:2px 0 6px}
+.rec .abs{font-size:13px;color:var(--ink2);max-width:78ch;display:none;margin:6px 0}
+.rec.open .abs{display:block}
+.rec .actions{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center}
+/* stat tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.tile{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow)}
+.tile .tl{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);font-weight:700}
+.tile .tv{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:24px;font-weight:600;margin-top:2px}
+.tile .ts{font-size:11px;color:var(--ink2)}
+/* charts */
+.chartbox{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;box-shadow:var(--shadow);margin-bottom:16px;overflow-x:auto}
+.chartbox h3{font-size:14px;margin-bottom:2px}
+.chartbox .sub{font-size:12px;color:var(--ink2);margin-bottom:8px}
+svg text{font-family:var(--sans);fill:var(--ink2)}
+svg .axis line,svg .grid line{stroke:var(--border2)}
+svg .num{font-family:var(--mono)}
+#tooltip{position:fixed;pointer-events:none;background:var(--ink);color:var(--ground);font-size:12px;padding:6px 9px;border-radius:6px;z-index:200;display:none;max-width:320px;font-family:var(--mono)}
+/* modal */
+.modal-bg{position:fixed;inset:0;background:rgba(15,20,24,.5);z-index:100;display:none;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border-radius:12px;max-width:660px;width:92%;max-height:84vh;overflow:auto;padding:20px 22px;box-shadow:var(--shadow)}
+.modal h3{font-size:17px;margin-bottom:10px}
+/* toast */
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:9px 16px;border-radius:8px;font-size:13px;z-index:300;display:none;box-shadow:var(--shadow)}
+/* misc */
+.gapflag{border-left:3px solid var(--warn);padding-left:8px}
+.editcell input{width:90px;font-family:var(--mono);font-size:12px;padding:3px 6px}
+.editcell input.wide{width:170px}
+details.adv{margin-top:8px}
+details.adv summary{cursor:pointer;color:var(--ink2);font-size:12px;font-weight:600}
+.stagefoot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:20px;padding-top:14px;border-top:1px solid var(--border);color:var(--ink2);font-size:13px;flex-wrap:wrap}
+#firstrun{border:1px solid var(--accent);background:var(--accent-soft);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;max-width:74ch}
+@media (prefers-reduced-motion: no-preference){
+  .stage.active{animation:fadein .18s ease}
+  @keyframes fadein{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+}
+@media (max-width: 900px){
+  #appwrap{flex-direction:column}
+  #rail{width:100%;flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid var(--border)}
+  .step .badge{display:none}
+  #railfoot{display:none}
+  .grid2,.grid3{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <div id="brand">MetaEcon<small>meta-analysis workbench</small></div>
+  <input id="projname" value="Untitled review" aria-label="Project name">
+  <div id="prisma-mini"></div>
+  <span id="savestate" class="tiny" style="color:var(--good);min-width:58px" role="status"></span>
+  <div class="row" style="gap:6px">
+    <button class="quiet" id="btn-demo" title="Load a worked example project">Demo</button>
+    <button class="quiet" id="btn-key" title="Set your Anthropic API key">API key</button>
+    <button class="quiet" id="btn-save" title="Download project as JSON">Save</button>
+    <button class="quiet" id="btn-load" title="Load a project JSON">Open</button>
+    <button class="quiet" id="btn-theme" title="Toggle light/dark">◐</button>
+  </div>
+</div>
+
+<div id="appwrap">
+<nav id="rail" aria-label="Pipeline stages">
+  <button class="step" data-stage="protocol"><span class="n">1</span>Protocol<span class="badge" id="bdg-protocol"></span></button>
+  <button class="step" data-stage="screen"><span class="n">2</span>Search &amp; screen<span class="badge" id="bdg-screen"></span></button>
+  <button class="step" data-stage="retrieve"><span class="n">3</span>Retrieve<span class="badge" id="bdg-retrieve"></span></button>
+  <button class="step" data-stage="extract"><span class="n">4</span>Extract<span class="badge" id="bdg-extract"></span></button>
+  <button class="step" data-stage="adjudicate"><span class="n">5</span>Adjudicate<span class="badge" id="bdg-adjudicate"></span></button>
+  <button class="step" data-stage="analyze"><span class="n">6</span>Analyze<span class="badge" id="bdg-analyze"></span></button>
+  <button class="step" data-stage="export"><span class="n">7</span>Report &amp; export<span class="badge" id="bdg-export"></span></button>
+  <div id="railfoot">
+    <div id="valcard">
+      <div style="font-weight:700;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3)">Extraction benchmark</div>
+      <div class="vnum" id="val-headline">—</div>
+      <div class="muted" id="val-sub">vs. hand-coded ground truth</div>
+      <button class="quiet tiny" id="btn-val" style="padding:2px 0">See methodology →</button>
+    </div>
+  </div>
+</nav>
+
+<main id="main">
+
+<!-- ============ 1 PROTOCOL ============ -->
+<section class="stage" id="stage-protocol">
+<header><h2>Protocol</h2>
+<p>The methodological decisions of your review, made explicit up front. Everything downstream — search filters, screening criteria, the extraction instructions sent to the model — is generated from this page.</p></header>
+<div class="card">
+  <div class="field"><label for="p-question">Research question</label>
+  <textarea id="p-question" rows="2" style="width:100%" placeholder="e.g., What is the effect of land titling on agricultural investment?"></textarea></div>
+  <div class="grid2">
+    <div class="field"><label for="p-param">Target parameter (what the coefficient measures)</label>
+    <input id="p-param" style="width:100%" placeholder="e.g., effect of formal title on probability of investment"></div>
+    <div class="field"><label for="p-estype">Effect-size metric</label>
+    <select id="p-estype" style="width:100%">
+      <option value="raw">Raw coefficient / elasticity (as reported)</option>
+      <option value="semi">Semi-elasticity / percentage points</option>
+      <option value="pcc">Partial correlation (computed from t &amp; df)</option>
+      <option value="smd">Standardized mean difference (d/g)</option>
+      <option value="other">Other (describe in notes)</option>
+    </select></div>
+  </div>
+  <div class="field"><label>Identification strategies to include</label>
+  <div class="row" id="p-strategies"></div></div>
+  <div class="grid3">
+    <div class="field"><label for="p-ymin">Year from</label><input id="p-ymin" type="number" value="1990" style="width:100%"></div>
+    <div class="field"><label for="p-ymax">Year to</label><input id="p-ymax" type="number" value="2026" style="width:100%"></div>
+    <div class="field"><label for="p-pubtype">Publication types</label>
+    <select id="p-pubtype" style="width:100%"><option value="both">Published + working papers</option><option value="pub">Published only</option><option value="wp">Working papers only</option></select></div>
+  </div>
+  <div class="grid2">
+    <div class="field"><label for="p-journals">Journal filter (optional, one per line — matched against venue name)</label>
+    <textarea id="p-journals" rows="3" style="width:100%" placeholder="American Economic Review&#10;Journal of Development Economics"></textarea></div>
+    <div class="field"><label for="p-notes">Inclusion / exclusion notes (shown to the screener — human or AI)</label>
+    <textarea id="p-notes" rows="3" style="width:100%" placeholder="Exclude: cross-country regressions, purely descriptive studies…"></textarea></div>
+  </div>
+  <p class="tiny muted">These choices are saved with the project file and stamped into the provenance log — reviewers can audit exactly what the machine was told.</p>
+</div>
+</section>
+
+<!-- ============ 2 SCREEN ============ -->
+<section class="stage" id="stage-screen">
+<header><h2>Search &amp; screen</h2>
+<p>Build the candidate pool, then screen titles and abstracts. Or skip screening entirely and add your studies directly — both paths land in the same corpus, and the PRISMA log records which route each study took.</p></header>
+<div class="tabs">
+  <button class="tab active" data-tab="search">Automated search</button>
+  <button class="tab" data-tab="direct">Add directly (skip screening)</button>
+</div>
+
+<div id="tab-search">
+<div class="card">
+  <h3>Search strategies</h3>
+  <div class="grid2">
+    <div class="field"><label for="s-query">Keyword query (OpenAlex full-text search)</label>
+    <input id="s-query" style="width:100%" placeholder="land titling agricultural investment"></div>
+    <div class="field"><label for="s-venue">Venue contains (optional)</label>
+    <input id="s-venue" style="width:100%" placeholder="economic"></div>
+  </div>
+  <div class="grid2">
+    <div class="field"><label for="s-seeds">Snowball seeds (DOIs, one per line — pulls references + citing papers)</label>
+    <textarea id="s-seeds" rows="2" style="width:100%" placeholder="10.1257/aer.100.4.1863"></textarea></div>
+    <div class="field"><label>Field focus (JEL-style) — pick any number</label>
+    <div class="row" id="s-jel"></div></div>
+  </div>
+  <div class="grid2">
+    <div class="field"><label for="s-region">Study region (added to the query — OpenAlex has no "country studied" field, so we match it in the text)</label>
+    <select id="s-region" style="width:100%"><option value="">Any region</option></select></div>
+    <div class="field"><label for="s-country">Country (narrows the region)</label>
+    <select id="s-country" style="width:100%" disabled><option value="">Whole region</option></select></div>
+  </div>
+  <div class="row">
+    <button class="primary" id="btn-search">Run search</button>
+    <button id="btn-snowball">Run snowball</button>
+    <span class="tiny muted">Year range and journal filter come from the protocol. Results deduplicate by DOI and title.</span>
+  </div>
+  <div class="tiny muted" id="search-status" style="margin-top:8px"></div>
+</div>
+<div class="card">
+  <div class="row" style="justify-content:space-between">
+    <h3 style="margin:0">Screening queue <span class="muted tiny" id="queue-count"></span></h3>
+    <div class="row">
+      <select id="screen-filter"><option value="pending">Pending</option><option value="included">Included</option><option value="excluded">Excluded</option><option value="maybe">Maybe</option><option value="all">All</option></select>
+      <button id="btn-aiscreen" title="Model suggests include/exclude with a reason; you confirm every verdict">AI-assist screening</button>
+    </div>
+  </div>
+  <div class="tiny muted" id="screen-status" style="margin-top:6px"></div>
+  <div id="screen-list" style="margin-top:10px"></div>
+</div>
+</div>
+
+<div id="tab-direct" style="display:none">
+<div class="card">
+  <h3>Add studies directly</h3>
+  <p class="tiny muted" style="margin-top:0">These enter the corpus as <em>included</em>, bypassing screening (logged as manually added in the PRISMA flow).</p>
+  <div class="grid2">
+    <div class="field"><label for="d-dois">DOIs (one per line — metadata fetched from OpenAlex)</label>
+    <textarea id="d-dois" rows="4" style="width:100%" placeholder="10.1093/qje/qjaa030&#10;10.1257/app.20190347"></textarea>
+    <button class="primary" style="margin-top:6px" id="btn-adddois">Fetch &amp; add</button></div>
+    <div class="field"><label for="d-bibtex">Or paste BibTeX</label>
+    <textarea id="d-bibtex" rows="4" style="width:100%" placeholder="@article{key, title={...}, author={...}, year={2020}}"></textarea>
+    <button style="margin-top:6px" id="btn-addbib">Parse &amp; add</button></div>
+  </div>
+  <button class="quiet" id="btn-addblank">+ Add one manually</button>
+</div>
+</div>
+</section>
+
+<!-- ============ 3 RETRIEVE ============ -->
+<section class="stage" id="stage-retrieve">
+<header><h2>Retrieve full texts</h2>
+<p>The system fetches what it can from open-access sources, then asks you to fill the gaps. Paywalled papers: upload the PDF from your library access, or paste the text of the results section.</p></header>
+<div class="card">
+  <div class="row" style="justify-content:space-between">
+    <div class="row"><button class="primary" id="btn-oacheck">Check open access (all)</button><span class="tiny muted" id="retrieve-status"></span></div>
+    <span class="chip" id="retrieve-progress"></span>
+  </div>
+  <p class="tiny muted" style="margin:10px 0 0">
+    <b>Open access</b> = can the full text be fetched for free: <span class="chip good tiny">free PDF</span> best case;
+    <span class="chip warn tiny">web page only</span> open the link, save the PDF, upload it here;
+    <span class="chip crit tiny">paywalled</span> get it through your library access and upload it.</p>
+  <div class="scrollx" style="margin-top:8px">
+  <table id="retrieve-table"><thead><tr><th>Study</th><th>Year</th><th>Venue</th><th title="Whether a free copy of the full text exists">Open access</th><th>Full text</th><th>Actions</th></tr></thead><tbody></tbody></table>
+  </div>
+</div>
+</section>
+
+<!-- ============ 4 EXTRACT ============ -->
+<section class="stage" id="stage-extract">
+<header><h2>Extract estimates</h2>
+<p>One model call per paper against a fixed JSON schema: every reported estimate of your target parameter, with coefficient, standard error, specification, and a confidence flag. Numbers are stored exactly as printed. You can always add or edit estimates by hand.</p></header>
+<div class="card">
+  <div class="row" style="justify-content:space-between">
+    <div class="row">
+      <label style="margin:0">Model</label>
+      <select id="x-model">
+        <option value="claude-sonnet-5">Claude Sonnet 5 (recommended)</option>
+        <option value="claude-opus-4-8">Claude Opus 4.8</option>
+        <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (cheap triage)</option>
+      </select>
+      <button class="primary" id="btn-extract-all">Extract all ready</button>
+    </div>
+    <span class="tiny muted" id="extract-status"></span>
+  </div>
+  <details class="adv"><summary>Extraction instructions (generated from your protocol — editable)</summary>
+    <textarea id="x-prompt" rows="10" style="width:100%;font-family:var(--mono);font-size:12px;margin-top:6px"></textarea>
+    <button class="quiet tiny" id="btn-regen-prompt">Regenerate from protocol</button>
+  </details>
+  <div class="scrollx" style="margin-top:12px">
+  <table id="extract-table"><thead><tr><th>Study</th><th>Source</th><th>Status</th><th>Estimates</th><th>Actions</th></tr></thead><tbody></tbody></table>
+  </div>
+</div>
+</section>
+
+<!-- ============ 5 ADJUDICATE ============ -->
+<section class="stage" id="stage-adjudicate">
+<header><h2>Adjudicate</h2>
+<p>The model does the laborious majority; you adjudicate what it flagged. Low-confidence and incomplete rows queue first — verify, correct, or drop each one. Only verified estimates enter the analysis by default.</p></header>
+<div class="tiles" id="adj-tiles"></div>
+<div class="card">
+  <div class="row" style="justify-content:space-between">
+    <div class="row">
+      <select id="adj-filter">
+        <option value="gaps">Needs attention (low confidence / missing SE)</option>
+        <option value="unverified">All unverified</option>
+        <option value="verified">Verified</option>
+        <option value="all">All estimates</option>
+      </select>
+      <select id="adj-study"><option value="">All studies</option></select>
+    </div>
+    <button id="btn-verify-high" title="Bulk-verify rows the model flagged high-confidence and complete">Verify all high-confidence</button>
+  </div>
+  <div class="scrollx" style="margin-top:10px">
+  <table id="adj-table"><thead><tr><th>Study</th><th>Coef</th><th>SE</th><th>Strategy</th><th>Spec / table</th><th>Conf.</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+  </div>
+</div>
+</section>
+
+<!-- ============ 6 ANALYZE ============ -->
+<section class="stage" id="stage-analyze">
+<header><h2>Analyze</h2>
+<p>Standard meta-analytic estimators computed in the browser — nothing leaves the page. Every switch here is a methodological decision; the export records the configuration you chose.</p></header>
+<div class="card">
+  <div class="row">
+    <div><label>Estimates</label><select id="a-which"><option value="verified">Verified only</option><option value="all">All extracted</option></select></div>
+    <div><label>Within-study aggregation</label><select id="a-agg"><option value="none">None (all estimates)</option><option value="mean">Study mean</option><option value="median">Study median</option></select></div>
+    <div><label>Pooling</label><select id="a-pool"><option value="re">Random effects (DL)</option><option value="fe">Fixed effect</option></select></div>
+    <div><label>Subgroup</label><select id="a-sub"><option value="">None</option><option value="strategy">By identification strategy</option></select></div>
+    <div><label>Winsorize |effect|</label><select id="a-trim"><option value="0">Off</option><option value="0.01">1%</option><option value="0.05">5%</option></select></div>
+  </div>
+</div>
+<div class="tiles" id="a-tiles"></div>
+<div class="chartbox"><h3>Forest plot</h3><div class="sub" id="forest-sub"></div><div id="forest"></div></div>
+<div class="grid2">
+  <div class="chartbox"><h3>Funnel plot</h3><div class="sub">Effect vs. standard error; asymmetry suggests selective reporting</div><div id="funnel"></div></div>
+  <div class="chartbox"><h3>Publication bias (FAT-PET)</h3><div class="sub">Precision-weighted regression: effect = β₀ + β₁·SE. β₁ = funnel asymmetry test; β₀ = effect beyond bias</div><div id="fatpet"></div></div>
+</div>
+<div class="card" id="subgroup-card" style="display:none"><h3>Subgroup results</h3><div class="scrollx"><table id="subgroup-table"><thead><tr><th>Group</th><th>k</th><th>Pooled</th><th>95% CI</th><th>I²</th></tr></thead><tbody></tbody></table></div></div>
+</section>
+
+<!-- ============ 7 EXPORT ============ -->
+<section class="stage" id="stage-export">
+<header><h2>Report &amp; export</h2>
+<p>Everything auditable: the estimate-level dataset, the PRISMA flow with your actual counts, the bibliography, and the full provenance log of every automated action.</p></header>
+<div class="card"><h3>Downloads</h3>
+  <div class="row">
+    <button class="primary" id="btn-csv">Estimates CSV</button>
+    <button id="btn-bib">Bibliography (.bib)</button>
+    <button id="btn-prisma-svg">PRISMA diagram (SVG)</button>
+    <button id="btn-json">Project file (JSON)</button>
+    <button id="btn-log">Provenance log (CSV)</button>
+  </div>
+</div>
+<div class="chartbox"><h3>PRISMA flow</h3><div class="sub">Counts update live from the corpus</div><div id="prisma-svg" style="max-width:640px"></div></div>
+<div class="card"><h3>Provenance log</h3><div class="scrollx" style="max-height:300px;overflow-y:auto"><table id="log-table"><thead><tr><th>When</th><th>Action</th><th>Detail</th></tr></thead><tbody></tbody></table></div></div>
+</section>
+
+</main>
+</div>
+
+<div id="tooltip" role="status"></div>
+<div id="toast"></div>
+
+<!-- modals -->
+<div class="modal-bg" id="modal-key"><div class="modal">
+  <h3>Anthropic API key</h3>
+  <p class="tiny muted">Extraction and AI-assisted screening call the Claude API directly from your browser — no server sees your key or your papers. Get a key at console.anthropic.com. The key is kept in this tab's session only, unless you choose to remember it on this device.</p>
+  <div class="field"><label for="key-input">API key</label><input id="key-input" type="password" style="width:100%" placeholder="sk-ant-…"></div>
+  <label class="row" style="font-weight:400"><input type="checkbox" id="key-remember" style="width:auto"> Remember on this device (localStorage)</label>
+  <div class="row" style="justify-content:flex-end;margin-top:12px"><button id="key-cancel">Cancel</button><button class="primary" id="key-save">Save key</button></div>
+</div></div>
+
+<div class="modal-bg" id="modal-text"><div class="modal">
+  <h3 id="text-title">Paste full text</h3>
+  <p class="tiny muted">Paste the paper's text (at minimum: the results tables and their notes). It is stored in your project file only.</p>
+  <textarea id="text-input" rows="12" style="width:100%;font-family:var(--mono);font-size:12px"></textarea>
+  <div class="row" style="justify-content:flex-end;margin-top:12px"><button id="text-cancel">Cancel</button><button class="primary" id="text-save">Save text</button></div>
+</div></div>
+
+<div class="modal-bg" id="modal-est"><div class="modal">
+  <h3 id="est-title">Estimates</h3>
+  <div id="est-body"></div>
+</div></div>
+
+<div class="modal-bg" id="modal-val"><div class="modal" style="max-width:760px">
+  <h3>Validation — how do we know extraction is accurate?</h3>
+  <div id="val-body"></div>
+</div></div>
+
+<script>
+'use strict';
+/* ============================================================
+   MetaEcon — state, persistence, navigation, shared utilities
+   ============================================================ */
+
+const STRATEGIES = [
+  ['rct','RCT'],['did','Difference-in-differences'],['event','Event study'],
+  ['rdd','Regression discontinuity'],['iv','Instrumental variables'],
+  ['shift','Shift-share / Bartik'],['match','Matching / PSM'],
+  ['synth','Synthetic control'],['other','Other / observational']
+];
+const EXCLUDE_REASONS = ['Different treatment','Different outcome','Different country/region','No causal identification','No usable estimates','Duplicate'];
+
+// Filled in from the P0 benchmark run (see Validation modal for methodology).
+const VALIDATION = {
+  dataset_label: 'Havránek (2015, JEEA) — intertemporal substitution, meta-analysis.cz open dataset',
+  n_gt: 271, n_studies: 9,
+  recall: 0.993, precision: 0.542, tuple_acc: 0.982, high_acc: 0.989,
+  note: 'Precision reads low by construction: the pipeline extracts every reported specification (plus deterministic reciprocal conversions for inverse-form parameters), while the meta-analysts coded a curated subset — unmatched extractions are mostly real estimates outside the authors’ coding scope, not hallucinations. Five of the nine benchmark PDFs were scanned images read by vision; per-study tuple accuracy was 100% on seven studies, 98% and 59/60 on the other two.'
+};
+
+const S = {
+  name: 'Untitled review',
+  protocol: { question:'', param:'', esType:'raw', strategies:['rct','did','rdd','iv','shift'],
+              ymin:1990, ymax:2026, pubtype:'both', journals:'', notes:'' },
+  prompt: '',          // extraction instructions (regenerable from protocol)
+  records: [],         // the corpus
+  log: [],             // provenance entries {ts, action, detail}
+  counters: { identified:0, dupes:0 } // search-side PRISMA tallies
+};
+let API_KEY = sessionStorage.getItem('metaecon_key') || localStorage.getItem('metaecon_key') || '';
+
+function uid(){ return 'r' + Math.random().toString(36).slice(2,9); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function logAct(action, detail){ S.log.push({ts:new Date().toISOString(), action, detail}); persist(); }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block';
+  clearTimeout(toast._h); toast._h=setTimeout(()=>t.style.display='none', 3200); }
+
+/* ---------- persistence ---------- */
+function persist(){
+  try{ localStorage.setItem('metaecon_project', JSON.stringify(S)); flashSaved(); }
+  catch(e){ /* quota: PDFs can be big */ }
+}
+function flashSaved(){
+  const el=document.getElementById('savestate'); if(!el) return;
+  el.textContent='Saved ✓';
+  clearTimeout(flashSaved._h); flashSaved._h=setTimeout(()=>el.textContent='', 1600);
+}
+function restore(){
+  try{
+    const raw = localStorage.getItem('metaecon_project');
+    if(raw){ const obj = JSON.parse(raw); Object.assign(S, obj); }
+  }catch(e){}
+}
+
+/* ---------- navigation ---------- */
+let CURRENT = 'protocol';
+function nav(stage){
+  CURRENT = stage;
+  document.querySelectorAll('.stage').forEach(el=>el.classList.toggle('active', el.id==='stage-'+stage));
+  document.querySelectorAll('.step').forEach(el=>el.classList.toggle('active', el.dataset.stage===stage));
+  render(stage);
+}
+document.querySelectorAll('.step').forEach(b=>b.addEventListener('click', ()=>nav(b.dataset.stage)));
+
+/* Every stage ends with an explicit "what next" footer so a first-time
+   visitor never has to guess that the left rail is the workflow. */
+const STAGE_FLOW = {
+  protocol:  ['screen',     'Search & screen', 'Everything on this page saves as you type — there is nothing to submit.'],
+  screen:    ['retrieve',   'Retrieve',        'Done screening? The included studies move forward.'],
+  retrieve:  ['extract',    'Extract',         'Papers with a PDF or pasted text are ready for extraction.'],
+  extract:   ['adjudicate', 'Adjudicate',      'Extracted estimates queue for your review next.'],
+  adjudicate:['analyze',    'Analyze',         'Verified estimates feed the meta-analysis.'],
+  analyze:   ['export',     'Report & export', 'Happy with the configuration? Get the outputs.'],
+  export:    [null, null, 'End of the pipeline — your dataset, PRISMA flow, and provenance log download above.']
+};
+function ensureStageFoot(stage){
+  const sec=document.getElementById('stage-'+stage);
+  let foot=sec.querySelector('.stagefoot');
+  if(!foot){ foot=document.createElement('div'); foot.className='stagefoot'; sec.appendChild(foot); }
+  const [next,label,note]=STAGE_FLOW[stage];
+  foot.innerHTML = `<span>${esc(note)}</span>` +
+    (next? `<button class="primary" data-next="${next}">Continue to ${esc(label)} →</button>` : '');
+  const b=foot.querySelector('[data-next]');
+  if(b) b.addEventListener('click', ()=>nav(next));
+  // first-visit hint on Protocol (empty project only)
+  if(stage==='protocol'){
+    let fr=document.getElementById('firstrun');
+    if(!S.records.length && !S.protocol.question){
+      if(!fr){ fr=document.createElement('div'); fr.id='firstrun';
+        sec.insertBefore(fr, sec.querySelector('.card')); }
+      fr.innerHTML='<b>How this works:</b> the numbered steps in the left rail are the pipeline — fill this page, then use the <b>Continue</b> button at the bottom (or click a step) to move on. Want to see a finished project first? Press <b>Demo</b> in the top bar.';
+    } else if(fr){ fr.remove(); }
+  }
+}
+function render(stage){
+  renderBadges();
+  ensureStageFoot(stage);
+  if(stage==='protocol') renderProtocol();
+  if(stage==='screen') renderScreen();
+  if(stage==='retrieve') renderRetrieve();
+  if(stage==='extract') renderExtract();
+  if(stage==='adjudicate') renderAdjudicate();
+  if(stage==='analyze') renderAnalyze();
+  if(stage==='export') renderExport();
+}
+
+/* ---------- derived counts / PRISMA ---------- */
+function counts(){
+  const r = S.records;
+  const searched = r.filter(x=>x.source!=='manual');
+  const manual  = r.filter(x=>x.source==='manual');
+  const included = r.filter(x=>x.screen==='included');
+  const withText = included.filter(x=>hasSource(x));
+  const allEst = r.flatMap(x=>x.estimates.map(e=>({...e, _rec:x})));
+  const verified = allEst.filter(e=>e.verified);
+  const gaps = allEst.filter(e=>!e.verified && (e.confidence==='low' || !num(e.se)));
+  return {
+    identified: S.counters.identified, dupes: S.counters.dupes,
+    screened: searched.length, manual: manual.length,
+    pending: r.filter(x=>x.screen==='pending').length,
+    maybe: r.filter(x=>x.screen==='maybe').length,
+    excluded: r.filter(x=>x.screen==='excluded').length,
+    included: included.length, withText: withText.length,
+    extracted: included.filter(x=>x.estimates.length>0).length,
+    nEst: allEst.length, nVerified: verified.length, nGaps: gaps.length,
+    synthesized: included.filter(x=>x.estimates.some(e=>e.verified)).length
+  };
+}
+function hasSource(rec){ return !!(rec.fullText || rec.pdfB64); }
+function num(v){ const x = parseFloat(String(v==null?'':v).replace(/[^0-9eE+.\-]/g,'')); return isFinite(x)? x : null; }
+
+function renderBadges(){
+  const c = counts();
+  const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent = v||''; };
+  set('bdg-screen', c.pending? c.pending+' to screen' : (S.records.length? c.included+' in' : ''));
+  set('bdg-retrieve', c.included? c.withText+'/'+c.included : '');
+  set('bdg-extract', c.included? c.extracted+'/'+c.included : '');
+  set('bdg-adjudicate', c.nGaps? c.nGaps+' gaps' : (c.nEst? c.nVerified+'/'+c.nEst : ''));
+  set('bdg-analyze', c.nVerified? c.nVerified+' est' : '');
+  document.getElementById('prisma-mini').innerHTML =
+    `<span>identified <b>${c.identified}</b></span><span>screened <b>${c.screened}</b></span>`+
+    `<span>included <b>${c.included}</b></span><span>estimates <b>${c.nVerified}</b>/<b>${c.nEst}</b></span>`;
+}
+
+/* ---------- theme ---------- */
+document.getElementById('btn-theme').addEventListener('click', ()=>{
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme==='dark'
+             : matchMedia('(prefers-color-scheme: dark)').matches;
+  root.dataset.theme = dark ? 'light' : 'dark';
+  drawCharts();  // charts read computed colors
+});
+
+/* ---------- modals ---------- */
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click', e=>{ if(e.target===m) m.classList.remove('open'); }));
+
+/* API key modal */
+document.getElementById('btn-key').addEventListener('click', ()=>{
+  document.getElementById('key-input').value = API_KEY;
+  openModal('modal-key');
+});
+document.getElementById('key-cancel').addEventListener('click', ()=>closeModal('modal-key'));
+document.getElementById('key-save').addEventListener('click', ()=>{
+  API_KEY = document.getElementById('key-input').value.trim();
+  sessionStorage.setItem('metaecon_key', API_KEY);
+  if(document.getElementById('key-remember').checked) localStorage.setItem('metaecon_key', API_KEY);
+  else localStorage.removeItem('metaecon_key');
+  closeModal('modal-key'); toast(API_KEY? 'API key saved' : 'API key cleared');
+});
+
+/* ---------- save / load ---------- */
+function download(name, text, mime){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], {type:mime||'text/plain'}));
+  a.download = name; a.click(); URL.revokeObjectURL(a.href);
+}
+document.getElementById('btn-save').addEventListener('click', ()=>{
+  download((S.name||'metaecon').replace(/\W+/g,'_')+'.metaecon.json', JSON.stringify(S, null, 1), 'application/json');
+  logAct('project.save','downloaded project file');
+});
+document.getElementById('btn-load').addEventListener('click', ()=>{
+  const inp = document.createElement('input'); inp.type='file'; inp.accept='.json';
+  inp.onchange = ()=>{ const f=inp.files[0]; if(!f) return;
+    f.text().then(t=>{ try{
+      const obj = JSON.parse(t); if(!obj.records) throw new Error('not a MetaEcon project');
+      Object.assign(S, obj); afterStateChange(); nav('protocol'); toast('Project loaded');
+    }catch(e){ toast('Could not load: '+e.message); } });
+  };
+  inp.click();
+});
+document.getElementById('projname').addEventListener('change', e=>{ S.name = e.target.value; persist(); });
+
+function afterStateChange(){
+  document.getElementById('projname').value = S.name;
+  persist(); renderBadges();
+}
+
+/* ---------- validation panel ---------- */
+function renderValidation(){
+  const h = document.getElementById('val-headline'), s = document.getElementById('val-sub');
+  if(!VALIDATION){ h.textContent='pending'; s.textContent='benchmark run in progress'; return; }
+  h.textContent = (100*VALIDATION.high_acc).toFixed(1)+'%';
+  s.textContent = 'coef+SE accuracy, high-confidence rows';
+}
+document.getElementById('btn-val').addEventListener('click', ()=>{
+  const b = document.getElementById('val-body');
+  if(!VALIDATION){ b.innerHTML = '<p class="muted">Benchmark results not yet embedded in this build.</p>'; }
+  else{
+    const v = VALIDATION;
+    b.innerHTML = `
+    <p>Extraction was benchmarked against <b>${esc(v.dataset_label)}</b> — a published, hand-coded
+    meta-analysis dataset (${v.n_gt} ground-truth estimates across ${v.n_studies} primary studies).
+    The pipeline extracted estimates blind, then a pre-registered scorer matched them to the authors' coding.</p>
+    <div class="tiles">
+      <div class="tile"><div class="tl">High-conf accuracy</div><div class="tv">${(100*v.high_acc).toFixed(1)}%</div><div class="ts">coef+SE both correct, rows flagged high</div></div>
+      <div class="tile"><div class="tl">Recall</div><div class="tv">${(100*v.recall).toFixed(1)}%</div><div class="ts">of hand-coded estimates found</div></div>
+      <div class="tile"><div class="tl">Precision</div><div class="tv">${(100*v.precision).toFixed(1)}%</div><div class="ts">of extractions matching a coded row</div></div>
+      <div class="tile"><div class="tl">Tuple accuracy</div><div class="tv">${(100*v.tuple_acc).toFixed(1)}%</div><div class="ts">all rows, coef+SE correct</div></div>
+    </div>
+    <p class="tiny muted">${esc(v.note)}</p>
+    <p class="tiny muted">Decision rule was pre-registered before the run: proceed only if high-confidence
+    accuracy ≥ 90%. The point of the confidence flag: the model tells you which rows to check —
+    you adjudicate the flagged minority instead of re-reading every paper.</p>`;
+  }
+  openModal('modal-val');
+});
+
+/* ---------- boot (deferred until all scripts are parsed) ---------- */
+window.addEventListener('DOMContentLoaded', ()=>{
+  restore();
+  afterStateChange();
+  renderValidation();
+  nav(S.records.length ? 'screen' : 'protocol');
+});
+
+</script>
+<script>
+'use strict';
+/* ============================================================
+   MetaEcon — pipeline: protocol, screen, retrieve, extract, adjudicate
+   ============================================================ */
+
+/* ---------- 1 · protocol ---------- */
+function renderProtocol(){
+  const p = S.protocol;
+  const q=(id)=>document.getElementById(id);
+  q('p-question').value=p.question; q('p-param').value=p.param; q('p-estype').value=p.esType;
+  q('p-ymin').value=p.ymin; q('p-ymax').value=p.ymax; q('p-pubtype').value=p.pubtype;
+  q('p-journals').value=p.journals; q('p-notes').value=p.notes;
+  const box = q('p-strategies');
+  box.innerHTML = STRATEGIES.map(([k,l])=>
+    `<span class="chip chip-toggle ${p.strategies.includes(k)?'on':''}" data-k="${k}" role="checkbox" tabindex="0" aria-checked="${p.strategies.includes(k)}">${l}</span>`).join('');
+  box.querySelectorAll('.chip-toggle').forEach(ch=>{
+    const flip=()=>{ const k=ch.dataset.k;
+      p.strategies = p.strategies.includes(k) ? p.strategies.filter(x=>x!==k) : [...p.strategies,k];
+      persist(); renderProtocol(); };
+    ch.addEventListener('click', flip);
+    ch.addEventListener('keydown', e=>{ if(e.key===' '||e.key==='Enter'){e.preventDefault();flip();} });
+  });
+}
+[['p-question','question'],['p-param','param'],['p-estype','esType'],['p-ymin','ymin','num'],
+ ['p-ymax','ymax','num'],['p-pubtype','pubtype'],['p-journals','journals'],['p-notes','notes']]
+.forEach(([id,key,kind])=>{
+  document.getElementById(id).addEventListener('change', e=>{
+    S.protocol[key] = kind==='num' ? parseInt(e.target.value)||0 : e.target.value;
+    persist();
+  });
+});
+
+/* ---------- OpenAlex helpers ---------- */
+const OA_BASE = 'https://api.openalex.org';
+const MAILTO = 'mailto=metaecon@example.org';
+async function oaGet(path){
+  const sep = path.includes('?') ? '&' : '?';
+  const r = await fetch(OA_BASE + path + sep + MAILTO);
+  if(!r.ok) throw new Error('OpenAlex '+r.status);
+  return r.json();
+}
+function deinvert(idx){
+  if(!idx) return '';
+  const words=[];
+  for(const [w,positions] of Object.entries(idx)) for(const p of positions) words[p]=w;
+  return words.join(' ');
+}
+function normWork(w, source){
+  return {
+    id: uid(), oaId: (w.id||'').replace('https://openalex.org/',''),
+    doi: (w.doi||'').replace('https://doi.org/',''),
+    title: w.display_name||'(untitled)',
+    authors: (w.authorships||[]).slice(0,6).map(a=>a.author && a.author.display_name).filter(Boolean).join(', '),
+    year: w.publication_year||null,
+    journal: (w.primary_location && w.primary_location.source && w.primary_location.source.display_name)||'',
+    abstract: deinvert(w.abstract_inverted_index).slice(0,1600),
+    oaUrl: (w.best_oa_location && (w.best_oa_location.pdf_url || w.best_oa_location.landing_page_url)) ||
+           (w.open_access && w.open_access.oa_url) || '',
+    oaPdf: (w.best_oa_location && w.best_oa_location.pdf_url) || '',
+    source, screen:'pending', excludeReason:'', aiSuggest:null,
+    oaStatus:'unknown', fullText:'', pdfB64:'', pdfName:'', estimates:[]
+  };
+}
+function isDupe(rec){
+  return S.records.some(x=>
+    (rec.doi && x.doi && rec.doi.toLowerCase()===x.doi.toLowerCase()) ||
+    (rec.oaId && x.oaId && rec.oaId===x.oaId) ||
+    (x.title.toLowerCase().replace(/\W+/g,' ').trim()===rec.title.toLowerCase().replace(/\W+/g,' ').trim()));
+}
+function addRecords(list, note){
+  let added=0, dupes=0;
+  for(const rec of list){ S.counters.identified++; if(isDupe(rec)){ dupes++; S.counters.dupes++; } else { S.records.push(rec); added++; } }
+  logAct('corpus.add', `${note}: ${added} added, ${dupes} duplicates skipped`);
+  afterStateChange();
+  return {added, dupes};
+}
+const JEL_TOPICS = {
+  O:['O — Development','economic development'], Q:['Q — Agricultural & environmental','agricultural environmental economics'],
+  J:['J — Labor','labor economics'], I:['I — Health & education','health education economics'],
+  D:['D — Microeconomics','microeconomic behavior'], E:['E — Macroeconomics','macroeconomics monetary'],
+  G:['G — Finance','financial economics'], H:['H — Public economics','public economics taxation'],
+  C:['C — Econometrics','econometric methods']};
+// Study region -> countries. These are matched INSIDE the OpenAlex full-text query
+// (search supports AND/OR + quoted phrases); OpenAlex has no "country studied"
+// field — its country filters mean author affiliation, which is the wrong thing.
+const REGIONS = {
+  'Sub-Saharan Africa':['Ghana','Kenya','Ethiopia','Uganda','Tanzania','Rwanda','Nigeria','Malawi','Mozambique','Zambia','Benin','Burkina Faso','Senegal','Mali','Niger','South Africa','Zimbabwe','Madagascar'],
+  'Latin America & Caribbean':['Colombia','Peru','Mexico','Brazil','Argentina','Chile','Bolivia','Ecuador','Guatemala','Honduras','Nicaragua','Haiti','Dominican Republic','Uruguay','Paraguay','Venezuela'],
+  'South Asia':['India','Bangladesh','Pakistan','Nepal','Sri Lanka','Afghanistan'],
+  'East Asia & Pacific':['China','Indonesia','Vietnam','Philippines','Thailand','Cambodia','Myanmar','Laos','Papua New Guinea','Fiji'],
+  'Middle East & North Africa':['Egypt','Morocco','Tunisia','Jordan','Lebanon','Iraq','Yemen'],
+  'Europe & Central Asia':['Turkey','Ukraine','Poland','Romania','Georgia','Armenia','Kyrgyzstan','Tajikistan','Uzbekistan','Kazakhstan','Albania'],
+  'High-income (OECD)':['United States','Canada','United Kingdom','Germany','France','Italy','Spain','Netherlands','Sweden','Norway','Denmark','Switzerland','Australia','New Zealand','Japan']
+};
+/* one-time init of the search-strategy controls */
+(function initSearchControls(){
+  const jbox=document.getElementById('s-jel');
+  jbox.innerHTML=Object.entries(JEL_TOPICS).map(([k,[label]])=>
+    `<span class="chip chip-toggle" data-k="${k}" role="checkbox" tabindex="0" aria-checked="false">${label}</span>`).join('');
+  jbox.querySelectorAll('.chip-toggle').forEach(ch=>{
+    const flip=()=>{ ch.classList.toggle('on'); ch.setAttribute('aria-checked', ch.classList.contains('on')); };
+    ch.addEventListener('click', flip);
+    ch.addEventListener('keydown', e=>{ if(e.key===' '||e.key==='Enter'){e.preventDefault();flip();} });
+  });
+  const reg=document.getElementById('s-region'), cty=document.getElementById('s-country');
+  for(const r of Object.keys(REGIONS)) reg.appendChild(new Option(r, r));
+  reg.addEventListener('change', ()=>{
+    cty.innerHTML='<option value="">Whole region</option>';
+    cty.disabled=!reg.value;
+    if(reg.value) for(const c of REGIONS[reg.value]) cty.appendChild(new Option(c, c));
+  });
+})();
+function buildQuery(base){
+  const parts=[];
+  if(base) parts.push(base);
+  const jel=[...document.querySelectorAll('#s-jel .chip-toggle.on')].map(ch=>JEL_TOPICS[ch.dataset.k][1]);
+  if(jel.length===1) parts.push(`"${jel[0]}"`);
+  if(jel.length>1) parts.push('('+jel.map(t=>`"${t}"`).join(' OR ')+')');
+  const reg=document.getElementById('s-region').value, cty=document.getElementById('s-country').value;
+  if(cty) parts.push(`"${cty}"`);
+  else if(reg) parts.push('('+REGIONS[reg].map(c=>`"${c}"`).join(' OR ')+')');
+  return parts.join(' AND ');
+}
+
+/* ---------- 2 · search & snowball ---------- */
+function passesProtocolFilters(rec){
+  const p=S.protocol;
+  if(rec.year && (rec.year < p.ymin || rec.year > p.ymax)) return false;
+  const jl = p.journals.split('\n').map(s=>s.trim().toLowerCase()).filter(Boolean);
+  if(jl.length && rec.journal && !jl.some(j=>rec.journal.toLowerCase().includes(j))) return false;
+  const venue = document.getElementById('s-venue').value.trim().toLowerCase();
+  if(venue && !(rec.journal||'').toLowerCase().includes(venue)) return false;
+  return true;
+}
+document.getElementById('btn-search').addEventListener('click', async ()=>{
+  const qEl=document.getElementById('s-query'), st=document.getElementById('search-status');
+  if(!qEl.value.trim()){ toast('Enter a keyword query first'); return; }
+  const q=buildQuery(qEl.value.trim());
+  const p=S.protocol;
+  const type = p.pubtype==='pub' ? ',type:article' : p.pubtype==='wp' ? ',type:preprint' : '';
+  st.textContent='Searching OpenAlex…';
+  try{
+    let cursor='*', got=[], pages=0;
+    while(pages<2){
+      const res = await oaGet(`/works?search=${encodeURIComponent(q)}&filter=from_publication_date:${p.ymin}-01-01,to_publication_date:${p.ymax}-12-31${type}&per-page=25&cursor=${cursor}`);
+      got.push(...res.results.map(w=>normWork(w,'search')));
+      cursor = res.meta.next_cursor; pages++;
+      if(!cursor || res.results.length<25) break;
+    }
+    const kept = got.filter(passesProtocolFilters);
+    const {added,dupes} = addRecords(kept, `search "${q}"`);
+    st.textContent = `${got.length} results · ${got.length-kept.length} dropped by protocol filters · ${added} new added · ${dupes} duplicates.`;
+    renderScreen();
+  }catch(e){
+    st.innerHTML = `Search failed (<span class="num">${esc(e.message)}</span>). If you are viewing this page as a hosted artifact, external requests are blocked — use the <b>Demo</b> button, or run the app locally / from GitHub Pages for live search.`;
+  }
+});
+/* Snowball: pull each seed's references + citing papers as FULL OpenAlex records
+   (same normWork pipeline as keyword search — doi, venue, abstract, OA links all
+   populated), then apply the same protocol filters and dedup. */
+async function snowballFrom(seeds, note, st){
+  st = st || document.getElementById('search-status');
+  st.textContent='Snowballing…';
+  try{
+    let all=[];
+    for(const doi of seeds){
+      const w = await oaGet('/works/doi:'+encodeURIComponent(doi));
+      // backward: references (batch lookups of referenced_works ids)
+      const refs = (w.referenced_works||[]).slice(0,100).map(u=>u.replace('https://openalex.org/',''));
+      for(let i=0;i<refs.length;i+=25){
+        const res = await oaGet(`/works?filter=openalex_id:${refs.slice(i,i+25).join('|')}&per-page=25`);
+        all.push(...res.results.map(x=>normWork(x,'snowball')));
+      }
+      // forward: citing works
+      const cit = await oaGet(`/works?filter=cites:${w.id.replace('https://openalex.org/','')}&per-page=50`);
+      all.push(...cit.results.map(x=>normWork(x,'snowball')));
+      st.textContent=`Snowballed ${doi}: ${all.length} candidates so far…`;
+    }
+    const kept = all.filter(passesProtocolFilters);
+    const {added,dupes} = addRecords(kept, note);
+    st.textContent = `${all.length} candidates · ${all.length-kept.length} dropped by protocol filters · ${added} new in the queue · ${dupes} duplicates skipped.`;
+    renderScreen();
+  }catch(e){
+    st.innerHTML = `Snowball failed (<span class="num">${esc(e.message)}</span>). Hosted-artifact viewing blocks external requests — use Demo or run locally.`;
+  }
+}
+document.getElementById('btn-snowball').addEventListener('click', ()=>{
+  const seeds = document.getElementById('s-seeds').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!seeds.length){ toast('Add at least one seed DOI'); return; }
+  snowballFrom(seeds, `snowball ${seeds.length} seed(s)`);
+});
+
+/* ---------- 2 · direct add ---------- */
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active', x===t));
+  document.getElementById('tab-search').style.display = t.dataset.tab==='search'?'':'none';
+  document.getElementById('tab-direct').style.display = t.dataset.tab==='direct'?'':'none';
+}));
+document.getElementById('btn-adddois').addEventListener('click', async ()=>{
+  const dois=document.getElementById('d-dois').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!dois.length) return;
+  const got=[], misses=[];
+  for(const d of dois){
+    try{ const w=await oaGet('/works/doi:'+encodeURIComponent(d)); const r=normWork(w,'manual'); r.screen='included'; got.push(r); }
+    catch(e){ misses.push(d); }
+  }
+  addRecords(got, 'direct DOI add');
+  if(misses.length) toast('Not found: '+misses.join(', '));
+  else toast(got.length+' studies added (screening bypassed)');
+  renderScreen();
+});
+document.getElementById('btn-addbib').addEventListener('click', ()=>{
+  const txt=document.getElementById('d-bibtex').value;
+  const entries=[...txt.matchAll(/@\w+\s*\{[^,]+,([\s\S]*?)\n\}/g)];
+  const grab=(body,f)=>{ const m=body.match(new RegExp(f+'\\s*=\\s*[{"]([^}"]+)[}"]','i')); return m?m[1].replace(/[{}]/g,''):''; };
+  const got=entries.map(m=>{
+    const b=m[1];
+    return {...normWork({display_name:grab(b,'title')||'(untitled)'},'manual'),
+      authors:grab(b,'author').replace(/\s+and\s+/g,', '), year:parseInt(grab(b,'year'))||null,
+      journal:grab(b,'journal')||grab(b,'booktitle'), doi:grab(b,'doi'), screen:'included'};
+  }).filter(r=>r.title!=='(untitled)');
+  if(!got.length){ toast('No BibTeX entries parsed'); return; }
+  addRecords(got,'BibTeX add'); toast(got.length+' studies added (screening bypassed)'); renderScreen();
+});
+document.getElementById('btn-addblank').addEventListener('click', ()=>{
+  const r=normWork({display_name:'New study — edit me'},'manual'); r.screen='included';
+  addRecords([r],'manual blank add'); renderScreen();
+});
+
+/* ---------- 2 · screening UI ---------- */
+function renderScreen(){
+  const filt=document.getElementById('screen-filter').value;
+  const list=document.getElementById('screen-list');
+  const rows=S.records.filter(r=> filt==='all' ? true : r.screen===filt);
+  document.getElementById('queue-count').textContent = `(${rows.length})`;
+  list.innerHTML = rows.length? '' : '<p class="muted">Nothing here. Run a search, snowball from seeds, or add studies directly.</p>';
+  for(const r of rows){
+    const div=document.createElement('div'); div.className='rec'+(r.screen==='excluded'?' muted':'');
+    const sugg = r.aiSuggest ? `<span class="chip ${r.aiSuggest.suggest==='include'?'good':r.aiSuggest.suggest==='exclude'?'crit':'warn'}"
+        title="${esc(r.aiSuggest.reason)}">AI suggests: ${r.aiSuggest.suggest} — ${esc(r.aiSuggest.reason)}</span>` : '';
+    const link = r.doi? 'https://doi.org/'+r.doi : r.oaUrl||'';
+    div.innerHTML=`
+      <div class="t">${link?`<a href="${esc(link)}" target="_blank" rel="noopener">${esc(r.title)}</a>`:esc(r.title)}</div>
+      <div class="meta">${esc(r.authors)}${r.authors?' · ':''}${r.year||''} · <i>${esc(r.journal)}</i>
+        ${r.doi?` · <span class="num tiny">${esc(r.doi)}</span>`:''} · via ${r.source}</div>
+      <div class="abs">${esc(r.abstract||'')}</div>
+      <div class="actions">
+        ${r.abstract?'<button class="quiet tiny" data-a="abs">abstract</button>'
+          :`<span class="tiny muted" title="OpenAlex has no abstract for this record (publisher restriction)">no abstract available${link?' — open the title link':''}</span>`}
+        ${sugg}
+        <button class="tiny" data-a="inc" ${r.screen==='included'?'disabled':''}>Include</button>
+        ${r.doi?`<button class="tiny" data-a="sb" title="Include, then pull this paper's references and citing papers through the current protocol filters">Include + snowball</button>`:''}
+        <select class="tiny" data-a="exc"><option value="">Exclude…</option>${EXCLUDE_REASONS.map(x=>`<option>${x}</option>`).join('')}</select>
+        <button class="tiny" data-a="maybe" ${r.screen==='maybe'?'disabled':''}>Maybe</button>
+        ${r.screen!=='pending'?`<span class="chip ${r.screen==='included'?'good':r.screen==='excluded'?'crit':'warn'}">${r.screen}${r.excludeReason?': '+esc(r.excludeReason):''}</span>`:''}
+        <button class="quiet tiny" data-a="del" title="Remove record entirely">✕</button>
+      </div>`;
+    div.querySelector('[data-a="abs"]')?.addEventListener('click',()=>div.classList.toggle('open'));
+    div.querySelector('[data-a="inc"]').addEventListener('click',()=>{ r.screen='included'; r.excludeReason=''; logAct('screen.include', r.title); afterStateChange(); renderScreen(); });
+    div.querySelector('[data-a="sb"]')?.addEventListener('click',()=>{
+      r.screen='included'; r.excludeReason='';
+      logAct('screen.include+snowball', r.title);
+      afterStateChange(); renderScreen();
+      snowballFrom([r.doi], 'snowball from included: '+r.title.slice(0,60), document.getElementById('screen-status'));
+    });
+    div.querySelector('[data-a="exc"]').addEventListener('change',e=>{ if(!e.target.value) return;
+      r.screen='excluded'; r.excludeReason=e.target.value; logAct('screen.exclude', r.title+' — '+e.target.value); afterStateChange(); renderScreen(); });
+    div.querySelector('[data-a="maybe"]').addEventListener('click',()=>{ r.screen='maybe'; logAct('screen.maybe', r.title); afterStateChange(); renderScreen(); });
+    div.querySelector('[data-a="del"]').addEventListener('click',()=>{ S.records=S.records.filter(x=>x!==r); logAct('corpus.remove', r.title); afterStateChange(); renderScreen(); });
+    list.appendChild(div);
+  }
+}
+document.getElementById('screen-filter').addEventListener('change', renderScreen);
+
+/* ---------- Anthropic API ---------- */
+async function claude(body){
+  if(!API_KEY) throw new Error('Set your Anthropic API key first (top bar → API key)');
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{ 'content-type':'application/json', 'x-api-key':API_KEY,
+      'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
+    body: JSON.stringify(body)
+  });
+  if(!r.ok){ const t=await r.text(); throw new Error('API '+r.status+': '+t.slice(0,300)); }
+  return r.json();
+}
+function toolResult(resp, name){
+  const blk=(resp.content||[]).find(c=>c.type==='tool_use' && c.name===name);
+  if(!blk) throw new Error('Model returned no structured output');
+  return blk.input;
+}
+
+/* ---------- 2 · AI-assisted screening ---------- */
+document.getElementById('btn-aiscreen').addEventListener('click', async ()=>{
+  const st=document.getElementById('screen-status');
+  if(!API_KEY){
+    st.textContent='AI screening needs an Anthropic API key — add one and click again.';
+    toast('Set your Anthropic API key first'); openModal('modal-key'); return;
+  }
+  const pending=S.records.filter(r=>r.screen==='pending' && !r.aiSuggest).slice(0,15);
+  if(!pending.length){ st.textContent='Nothing to screen: no pending records without an AI suggestion.'; return; }
+  st.textContent=`AI screening ${pending.length} records… (a few seconds)`;
+  const p=S.protocol;
+  try{
+    const resp=await claude({
+      model: document.getElementById('x-model').value, max_tokens: 4000,
+      tools:[{name:'screen_records', description:'Screening verdicts for candidate studies',
+        input_schema:{type:'object',required:['verdicts'],properties:{verdicts:{type:'array',items:{
+          type:'object',required:['id','suggest','reason'],properties:{
+            id:{type:'string'}, suggest:{enum:['include','exclude','maybe']}, reason:{type:'string'}}}}}}}],
+      tool_choice:{type:'tool',name:'screen_records'},
+      messages:[{role:'user',content:
+`You are screening titles/abstracts for a systematic review.
+Question: ${p.question}\nTarget parameter: ${p.param}
+Include only studies likely to use one of these identification strategies: ${p.strategies.map(k=>STRATEGIES.find(s=>s[0]===k)[1]).join(', ')}.
+Additional criteria: ${p.notes||'none'}
+Suggest include/exclude/maybe for each record with a one-clause reason. Be conservative: when the abstract is insufficient to tell, say "maybe". A human confirms every verdict.
+
+${pending.map(r=>`ID ${r.id}: ${r.title} (${r.year||'n.d.'}, ${r.journal||'n.p.'})\n${(r.abstract||'no abstract').slice(0,700)}`).join('\n\n')}`}]
+    });
+    const out=toolResult(resp,'screen_records');
+    let n=0;
+    for(const v of out.verdicts||[]){ const r=S.records.find(x=>x.id===v.id); if(r){ r.aiSuggest={suggest:v.suggest, reason:v.reason}; n++; } }
+    logAct('screen.ai', `${n} suggestions (${resp.model})`);
+    st.textContent=`AI suggested verdicts for ${n} records (colored chips below) — every one still needs your confirmation.`;
+    toast(`${n} AI suggestions added`);
+    afterStateChange(); renderScreen();
+  }catch(e){
+    st.textContent='AI screening failed: '+e.message+
+      (location.hostname.endsWith('claude.ai')||location.hostname.includes('artifact')?
+       ' — hosted-artifact pages block API calls; run the app locally for live AI screening.':'');
+    toast('AI screening failed — see the note above the queue');
+  }
+});
+
+/* ---------- 3 · retrieve ---------- */
+function renderRetrieve(){
+  const tb=document.querySelector('#retrieve-table tbody');
+  const inc=S.records.filter(r=>r.screen==='included');
+  const c=counts();
+  document.getElementById('retrieve-progress').textContent = `${c.withText} of ${c.included} have full text`;
+  document.getElementById('retrieve-progress').className = 'chip '+(c.withText===c.included && c.included? 'good':'warn');
+  tb.innerHTML = inc.length? '' : '<tr><td colspan="6" class="muted">No included studies yet — finish screening first.</td></tr>';
+  for(const r of inc){
+    const tr=document.createElement('tr');
+    const oa = r.oaStatus==='pdf' ? `<span class="chip good" title="A free PDF exists — open it, then upload it here">free PDF</span>`
+      : r.oaStatus==='landing' ? `<span class="chip warn" title="A free web page exists but no direct PDF — open it, save the PDF, upload it here">web page only</span>`
+      : r.oaStatus==='none' ? `<span class="chip crit" title="No free copy found — get it via your library access and upload it">paywalled</span>`
+      : `<span class="chip" title="Click 'Check open access' above">not checked</span>`;
+    const ft = r.pdfB64 ? `<span class="chip good">PDF: ${esc(r.pdfName)}</span>`
+      : r.fullText ? `<span class="chip good">pasted text (${(r.fullText.length/1000).toFixed(0)}k chars)</span>`
+      : `<span class="chip ${r.oaStatus==='none'?'crit':''} gap">missing — fill the gap</span>`;
+    tr.innerHTML=`
+      <td style="max-width:340px">${esc(r.title)}</td><td class="num">${r.year||''}</td>
+      <td>${esc(r.journal)}</td>
+      <td>${oa}${r.oaUrl?` <a href="${esc(r.oaUrl)}" target="_blank" rel="noopener" class="tiny">open</a>`:''}</td>
+      <td>${ft}</td>
+      <td class="row" style="gap:4px;flex-wrap:nowrap">
+        <button class="tiny" data-a="pdf">Upload PDF</button>
+        <button class="tiny" data-a="txt">Paste text</button>
+      </td>`;
+    tr.querySelector('[data-a="pdf"]').addEventListener('click',()=>{
+      const inp=document.createElement('input'); inp.type='file'; inp.accept='.pdf';
+      inp.onchange=()=>{ const f=inp.files[0]; if(!f) return;
+        if(f.size> 18*1024*1024){ toast('PDF too large (18 MB max in-browser)'); return; }
+        const rd=new FileReader();
+        rd.onload=()=>{ r.pdfB64=String(rd.result).split(',')[1]; r.pdfName=f.name;
+          logAct('retrieve.upload', r.title+' ← '+f.name); afterStateChange(); renderRetrieve(); };
+        rd.readAsDataURL(f); };
+      inp.click();
+    });
+    tr.querySelector('[data-a="txt"]').addEventListener('click',()=>{
+      document.getElementById('text-title').textContent='Paste full text — '+r.title.slice(0,60);
+      document.getElementById('text-input').value=r.fullText||'';
+      openModal('modal-text');
+      document.getElementById('text-save').onclick=()=>{
+        r.fullText=document.getElementById('text-input').value;
+        logAct('retrieve.paste', r.title+` (${r.fullText.length} chars)`);
+        closeModal('modal-text'); afterStateChange(); renderRetrieve();
+      };
+    });
+    tb.appendChild(tr);
+  }
+}
+document.getElementById('text-cancel').addEventListener('click',()=>closeModal('modal-text'));
+document.getElementById('btn-oacheck').addEventListener('click', async ()=>{
+  const st=document.getElementById('retrieve-status');
+  const inc=S.records.filter(r=>r.screen==='included' && r.doi);
+  let done=0;
+  try{
+    for(const r of inc){
+      const w=await oaGet('/works/doi:'+encodeURIComponent(r.doi));
+      r.oaPdf=(w.best_oa_location&&w.best_oa_location.pdf_url)||'';
+      r.oaUrl=r.oaPdf||(w.best_oa_location&&w.best_oa_location.landing_page_url)||(w.open_access&&w.open_access.oa_url)||'';
+      r.oaStatus = r.oaPdf? 'pdf' : r.oaUrl? 'landing' : 'none';
+      done++; st.textContent=`Checked ${done}/${inc.length}…`;
+    }
+    logAct('retrieve.oacheck', `${done} DOIs checked`);
+    st.textContent=`Done — ${done} checked. Studies without a direct PDF need your upload (library access) or pasted text.`;
+  }catch(e){ st.textContent='OA check failed: '+e.message+' (hosted-artifact viewing blocks external requests — run locally for live checks)'; }
+  afterStateChange(); renderRetrieve();
+});
+
+/* ---------- 4 · extract ---------- */
+function defaultPrompt(){
+  const p=S.protocol;
+  return `You are extracting estimates for a systematic review / meta-analysis.
+Research question: ${p.question||'(not stated)'}
+Target parameter: ${p.param||'the headline causal effect'}
+Effect-size metric to record: ${document.getElementById('p-estype').selectedOptions[0].textContent}
+Identification strategies in scope: ${p.strategies.map(k=>STRATEGIES.find(s=>s[0]===k)[1]).join(', ')}
+
+Extract EVERY reported estimate of the target parameter from this paper — every specification, subsample, outcome variant, and robustness row the authors report, from all tables (including appendix) and text. One row per estimate cell. Do NOT keep only the preferred estimate; meta-analyses code them all.
+
+Rules:
+- Copy coefficient and standard error EXACTLY as printed (as strings, keep all digits and signs).
+- If only a t-statistic or confidence interval is printed, record it in its own field and leave se null.
+- Classify each estimate's identification strategy.
+- Note the table/column it came from (table_ref) and the specification in brief (spec).
+- Flag extraction_confidence "low" whenever the source is garbled, the table structure is ambiguous, or you are unsure of the parameter — a wrong number marked high is the worst outcome.
+- Exclude: estimates quoted from other papers, first stages, placebo outcomes (mark them in notes if borderline), calibrated values.
+${p.notes? '\nAdditional protocol notes: '+p.notes : ''}`;
+}
+document.getElementById('btn-regen-prompt').addEventListener('click',()=>{
+  S.prompt=defaultPrompt(); document.getElementById('x-prompt').value=S.prompt; persist();
+});
+document.getElementById('x-prompt').addEventListener('change',e=>{ S.prompt=e.target.value; persist(); });
+
+const EST_SCHEMA = {type:'object',required:['estimates'],properties:{
+  identification:{type:'object',properties:{strategy:{enum:STRATEGIES.map(s=>s[0])},description:{type:'string'}}},
+  notes:{type:'string'},
+  estimates:{type:'array',items:{type:'object',required:['coefficient','extraction_confidence'],properties:{
+    outcome:{type:'string'}, coefficient:{type:'string'}, se:{type:['string','null']},
+    t_stat:{type:['string','null']}, ci_low:{type:['string','null']}, ci_high:{type:['string','null']},
+    units:{type:'string'}, spec:{type:'string'}, sample:{type:'string'}, table_ref:{type:'string'},
+    strategy:{enum:STRATEGIES.map(s=>s[0])}, extraction_confidence:{enum:['high','low']}}}}}};
+
+async function extractOne(r){
+  const model=document.getElementById('x-model').value;
+  const content=[];
+  if(r.pdfB64) content.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:r.pdfB64}});
+  const promptTxt=(S.prompt||defaultPrompt()) + `\n\nPaper: ${r.title} (${r.authors}, ${r.year||'n.d.'})` +
+    (r.pdfB64? '' : `\n\nFULL TEXT:\n${r.fullText.slice(0, 350000)}`);
+  content.push({type:'text',text:promptTxt});
+  const resp=await claude({ model, max_tokens: 16000,
+    tools:[{name:'record_estimates',description:'Structured estimates extracted from the paper',input_schema:EST_SCHEMA}],
+    tool_choice:{type:'tool',name:'record_estimates'},
+    messages:[{role:'user',content}] });
+  const out=toolResult(resp,'record_estimates');
+  const ts=new Date().toISOString();
+  r.estimates=(out.estimates||[]).map(e=>({
+    outcome:e.outcome||'', coefficient:e.coefficient||'', se:e.se||'', t_stat:e.t_stat||'',
+    ci_low:e.ci_low||'', ci_high:e.ci_high||'', units:e.units||'', spec:e.spec||'',
+    sample:e.sample||'', table_ref:e.table_ref||'',
+    strategy:e.strategy||(out.identification&&out.identification.strategy)||'other',
+    confidence:e.extraction_confidence||'low', verified:false, source:'llm', model, ts }));
+  r.idStrategy=(out.identification&&out.identification.strategy)||'';
+  r.extractNotes=out.notes||'';
+  logAct('extract.llm', `${r.title}: ${r.estimates.length} estimates (${model})`);
+}
+function renderExtract(){
+  if(!S.prompt) S.prompt=defaultPrompt();
+  document.getElementById('x-prompt').value=S.prompt;
+  const tb=document.querySelector('#extract-table tbody');
+  const inc=S.records.filter(r=>r.screen==='included');
+  tb.innerHTML = inc.length? '' : '<tr><td colspan="5" class="muted">No included studies yet.</td></tr>';
+  for(const r of inc){
+    const tr=document.createElement('tr');
+    const src = r.pdfB64? 'PDF' : r.fullText? 'text' : '—';
+    const status = r._extracting? '<span class="chip acc">extracting…</span>'
+      : r.estimates.length? `<span class="chip good">done</span>`
+      : hasSource(r)? '<span class="chip">ready</span>'
+      : '<span class="chip warn">no source</span>';
+    const lo=r.estimates.filter(e=>e.confidence==='low').length;
+    tr.innerHTML=`<td style="max-width:340px">${esc(r.title)}</td><td>${src}</td><td>${status}</td>
+      <td class="num">${r.estimates.length||''}${lo?` <span class="chip warn tiny">${lo} low</span>`:''}</td>
+      <td class="row" style="gap:4px;flex-wrap:nowrap">
+        <button class="tiny" data-a="run" ${hasSource(r)&&!r._extracting?'':'disabled'}>Extract</button>
+        <button class="tiny" data-a="manual">Manual…</button>
+      </td>`;
+    tr.querySelector('[data-a="run"]').addEventListener('click', async ()=>{
+      r._extracting=true; renderExtract();
+      try{ await extractOne(r); toast(`${r.estimates.length} estimates extracted`); }
+      catch(e){ toast('Extraction failed: '+e.message); logAct('extract.error', r.title+': '+e.message); }
+      r._extracting=false; afterStateChange(); renderExtract();
+    });
+    tr.querySelector('[data-a="manual"]').addEventListener('click',()=>openEstEditor(r));
+    tb.appendChild(tr);
+  }
+}
+document.getElementById('btn-extract-all').addEventListener('click', async ()=>{
+  const ready=S.records.filter(r=>r.screen==='included' && hasSource(r) && !r.estimates.length);
+  const st=document.getElementById('extract-status');
+  if(!ready.length){ st.textContent='Nothing ready (need full text, not yet extracted).'; return; }
+  let i=0;
+  for(const r of ready){
+    st.textContent=`Extracting ${++i}/${ready.length}: ${r.title.slice(0,50)}…`;
+    r._extracting=true; renderExtract();
+    try{ await extractOne(r); }catch(e){ logAct('extract.error', r.title+': '+e.message); st.textContent='Error on '+r.title.slice(0,40)+': '+e.message; }
+    r._extracting=false; afterStateChange(); renderExtract();
+  }
+  st.textContent=`Done — ${ready.length} papers processed. Next: adjudicate the flagged rows.`;
+});
+
+/* manual estimate editor (modal) */
+function openEstEditor(r){
+  document.getElementById('est-title').textContent='Estimates — '+r.title.slice(0,70);
+  const body=document.getElementById('est-body');
+  const draw=()=>{
+    body.innerHTML=`<div class="scrollx"><table><thead><tr><th>Coef</th><th>SE</th><th>Strategy</th><th>Spec</th><th>Table</th><th>Conf.</th><th></th></tr></thead>
+      <tbody>${r.estimates.map((e,i)=>`<tr class="editcell">
+        <td><input value="${esc(e.coefficient)}" data-i="${i}" data-f="coefficient"></td>
+        <td><input value="${esc(e.se)}" data-i="${i}" data-f="se"></td>
+        <td><select data-i="${i}" data-f="strategy">${STRATEGIES.map(s=>`<option value="${s[0]}" ${e.strategy===s[0]?'selected':''}>${s[1]}</option>`).join('')}</select></td>
+        <td><input class="wide" value="${esc(e.spec)}" data-i="${i}" data-f="spec"></td>
+        <td><input value="${esc(e.table_ref)}" data-i="${i}" data-f="table_ref"></td>
+        <td><select data-i="${i}" data-f="confidence"><option ${e.confidence==='high'?'selected':''}>high</option><option ${e.confidence==='low'?'selected':''}>low</option></select></td>
+        <td><button class="quiet tiny" data-del="${i}">✕</button></td></tr>`).join('')}</tbody></table></div>
+      <div class="row" style="margin-top:10px;justify-content:space-between">
+        <button id="est-add" class="tiny">+ Add row</button>
+        <button class="primary tiny" id="est-done">Done</button></div>`;
+    body.querySelectorAll('input,select').forEach(el=>el.addEventListener('change',()=>{
+      const e=r.estimates[+el.dataset.i]; e[el.dataset.f]=el.value; e.source=e.source==='llm'?'llm+edited':e.source; persist();
+    }));
+    body.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{ r.estimates.splice(+b.dataset.del,1); persist(); draw(); }));
+    body.querySelector('#est-add').addEventListener('click',()=>{
+      r.estimates.push({outcome:'',coefficient:'',se:'',t_stat:'',ci_low:'',ci_high:'',units:'',spec:'',sample:'',
+        table_ref:'',strategy:S.protocol.strategies[0]||'other',confidence:'high',verified:false,source:'manual',model:'',ts:new Date().toISOString()});
+      persist(); draw();
+    });
+    body.querySelector('#est-done').addEventListener('click',()=>{ closeModal('modal-est'); logAct('extract.manual', r.title+': edited'); afterStateChange(); render(CURRENT); });
+  };
+  draw(); openModal('modal-est');
+}
+
+/* ---------- 5 · adjudicate ---------- */
+function allEstimates(){
+  return S.records.filter(r=>r.screen==='included').flatMap(r=>r.estimates.map(e=>({e, r})));
+}
+function renderAdjudicate(){
+  const c=counts();
+  document.getElementById('adj-tiles').innerHTML=`
+    <div class="tile"><div class="tl">Estimates</div><div class="tv">${c.nEst}</div><div class="ts">across ${c.extracted} papers</div></div>
+    <div class="tile"><div class="tl">Verified</div><div class="tv">${c.nVerified}</div><div class="ts">enter the analysis</div></div>
+    <div class="tile"><div class="tl">Needs attention</div><div class="tv" style="color:${c.nGaps?'var(--warn)':'var(--good)'}">${c.nGaps}</div><div class="ts">low confidence or missing SE</div></div>`;
+  const sel=document.getElementById('adj-study');
+  const inc=S.records.filter(r=>r.screen==='included' && r.estimates.length);
+  const cur=sel.value;
+  sel.innerHTML='<option value="">All studies</option>'+inc.map(r=>`<option value="${r.id}" ${cur===r.id?'selected':''}>${esc(r.title.slice(0,60))}</option>`).join('');
+  const filt=document.getElementById('adj-filter').value;
+  const tb=document.querySelector('#adj-table tbody');
+  let rows=allEstimates();
+  if(sel.value) rows=rows.filter(x=>x.r.id===sel.value);
+  if(filt==='gaps') rows=rows.filter(x=>!x.e.verified && (x.e.confidence==='low'||!num(x.e.se)));
+  if(filt==='unverified') rows=rows.filter(x=>!x.e.verified);
+  if(filt==='verified') rows=rows.filter(x=>x.e.verified);
+  tb.innerHTML=rows.length?'':'<tr><td colspan="8" class="muted">No rows match this filter.</td></tr>';
+  for(const {e,r} of rows){
+    const tr=document.createElement('tr'); if(!e.verified&&(e.confidence==='low'||!num(e.se))) tr.className='gapflag';
+    const seCell = num(e.se)!=null ? esc(e.se) : e.t_stat? `<span class="muted">t=${esc(e.t_stat)}</span>` : '<span class="chip warn tiny">missing</span>';
+    tr.innerHTML=`
+      <td style="max-width:200px" class="tiny">${esc(r.title.slice(0,60))}</td>
+      <td class="editcell"><input value="${esc(e.coefficient)}" data-f="coefficient" style="width:80px"></td>
+      <td class="editcell"><input value="${esc(e.se)}" data-f="se" placeholder="${e.t_stat?('t='+e.t_stat):''}" style="width:70px"></td>
+      <td class="tiny">${esc((STRATEGIES.find(s=>s[0]===e.strategy)||['','?'])[1])}</td>
+      <td class="tiny" style="max-width:240px">${esc(e.spec)} ${e.table_ref?`<span class="num muted">[${esc(e.table_ref)}]</span>`:''}</td>
+      <td><span class="chip ${e.confidence==='high'?'good':'warn'} tiny">${e.confidence}</span></td>
+      <td>${e.verified?'<span class="chip good tiny">verified</span>':'<span class="chip tiny">pending</span>'}</td>
+      <td class="row" style="gap:4px;flex-wrap:nowrap">
+        <button class="tiny" data-a="v">${e.verified?'Unverify':'Verify'}</button>
+        <button class="quiet tiny" data-a="x" title="Drop this estimate">✕</button></td>`;
+    tr.querySelectorAll('input').forEach(inp=>inp.addEventListener('change',()=>{
+      e[inp.dataset.f]=inp.value; e.source=e.source==='llm'?'llm+edited':e.source; persist(); renderBadges();
+    }));
+    tr.querySelector('[data-a="v"]').addEventListener('click',()=>{
+      e.verified=!e.verified; if(e.verified) e.verifiedTs=new Date().toISOString();
+      logAct(e.verified?'adjudicate.verify':'adjudicate.unverify', r.title+' — '+e.coefficient);
+      afterStateChange(); renderAdjudicate();
+    });
+    tr.querySelector('[data-a="x"]').addEventListener('click',()=>{
+      r.estimates=r.estimates.filter(x=>x!==e); logAct('adjudicate.drop', r.title+' — '+e.coefficient);
+      afterStateChange(); renderAdjudicate();
+    });
+    tb.appendChild(tr);
+  }
+}
+document.getElementById('adj-filter').addEventListener('change', renderAdjudicate);
+document.getElementById('adj-study').addEventListener('change', renderAdjudicate);
+document.getElementById('btn-verify-high').addEventListener('click',()=>{
+  let n=0;
+  for(const {e} of allEstimates()) if(!e.verified && e.confidence==='high' && num(e.coefficient)!=null && num(e.se)!=null){ e.verified=true; n++; }
+  logAct('adjudicate.bulk', n+' high-confidence estimates verified');
+  toast(n+' estimates verified'); afterStateChange(); renderAdjudicate();
+});
+
+/* ---------- demo project ---------- */
+document.getElementById('btn-demo').addEventListener('click', ()=>{
+  if(S.records.length && !confirm('Replace the current project with the demo?')) return;
+  loadDemo(); nav('screen'); toast('Demo project loaded — walk the stages left to right');
+});
+function loadDemo(){
+  const mk=(t,a,y,j,doi,abs,src,scr)=>({...normWork({display_name:t},src||'search'),
+    authors:a, year:y, journal:j, doi:doi||'', abstract:abs, screen:scr||'pending'});
+  const est=(c,se,strat,spec,tab,conf,ver,t)=>({outcome:'investment',coefficient:c,se:se,t_stat:t||'',ci_low:'',ci_high:'',
+    units:'pp',spec:spec,sample:'',table_ref:tab,strategy:strat,confidence:conf,verified:!!ver,source:'llm',model:'demo',ts:'2026-07-01T00:00:00Z'});
+  const R=[];
+  const r1=mk('Property Rights and Investment Incentives: Evidence from an Urban Titling Program','E. Field',2005,'Journal of the European Economic Association','10.1162/jeea.2005.3.2-3.279','Exploits the staged rollout of a nationwide urban land titling program to estimate the effect of formal property rights on residential investment. Titled households increase housing renovation rates substantially, financed largely without credit.','search','included');
+  r1.fullText='(demo)'; r1.oaStatus='pdf';
+  r1.estimates=[est('0.68','0.16','did','Rollout timing DiD, household FE','Table 4, col 2','high',1),
+                est('0.42','0.19','did','+ district trends','Table 4, col 3','high',1),
+                est('0.71','','did','IV variant, SE not printed (t in notes)','Table 5, col 1','low',0,'3.2')];
+  const r2=mk('Property Rights for the Poor: Effects of Land Titling','S. Galiani, E. Schargrodsky',2010,'Journal of Public Economics','10.1016/j.jpubeco.2010.06.002','A natural experiment from a land occupation in Buenos Aires: some squatters received formal titles due to idiosyncratic legal challenges. Titled parcels show higher housing investment and smaller household size.','search','included');
+  r2.fullText='(demo)'; r2.oaStatus='landing';
+  r2.estimates=[est('0.120','0.035','other','Occupation natural experiment, OLS on titled parcel','Table 3, col 1','high',1),
+                est('0.095','0.041','other','+ parcel controls','Table 3, col 2','high',1)];
+  const r3=mk('The Profits of Power: Land Rights and Agricultural Investment in Ghana','M. Goldstein, C. Udry',2008,'Journal of Political Economy','10.1086/595561','Individuals holding local political office fallow land longer and obtain higher profits; insecure tenure depresses investment in soil fertility. Identification from within-household variation across plots.','search','included');
+  r3.fullText='(demo)'; r3.oaStatus='pdf';
+  r3.estimates=[est('0.26','0.09','other','Household-plot FE, fallowing on tenure security','Table 6, col 3','high',1)];
+  const r4=mk('Do Property Titles Increase Credit Access Among the Urban Poor?','E. Field, M. Torero',2006,'Working paper','','Uses the same Peruvian titling rollout to test the de Soto credit channel. Titles raise approval rates for public-bank loans but not private credit; no effect on interest rates.','search','maybe');
+  const r5=mk('Land Reform and Productivity: Evidence from India','T. Besley, R. Burgess',2000,'Quarterly Journal of Economics','10.1162/003355300554809','Panel of Indian states 1958-1992 relating cumulative land reform legislation to agricultural growth and poverty. State and year fixed effects; reform reduces poverty but the productivity effect is ambiguous.','search','excluded');
+  r5.excludeReason='No causal identification';
+  const r6=mk('Barriers to Household Risk Management: Evidence from India','S. Cole et al.',2013,'AEJ: Applied','10.1257/app.5.1.104','Randomized marketing of rainfall insurance. Off-topic for the land-titling question but surfaced by the keyword search.','search','excluded');
+  r6.excludeReason='Off-topic';
+  const r7=mk('Formalizing Rural Land Rights: A Randomized Rollout in Benin','M. Goldstein et al.',2018,'World Bank Policy Research WP','10.1596/1813-9450-7435','A randomized rollout of rural land-use certificates (PFR). Certified villages shift investment toward long-term crops and fallowing, with effects concentrated among plots held by women.','snowball','included');
+  r7.estimates=[]; r7.oaStatus='pdf'; r7.fullText='(demo)';
+  const r8=mk('Environmental and Gender Impacts of Land Tenure Regularization in Africa: Pilot Evidence from Rwanda','D. A. Ali, K. Deininger, M. Goldstein',2014,'Journal of Development Economics','10.1016/j.jdeveco.2013.12.009','Evaluates Rwanda\'s land tenure regularization pilot using a spatial discontinuity across cell boundaries. Regularization improved land access for married women, doubled investment in soil conservation, and the effects for female-headed households were even larger.','snowball','pending');
+  const r9=mk('Delinking Land Rights from Land Use: Certification and Migration in Mexico','A. de Janvry, K. Emerick, M. Gonzalez-Navarro, E. Sadoulet',2015,'American Economic Review','10.1257/aer.20130853','Mexico\'s ejido certification program (Procede) delinked land rights from land use; using the program rollout, certification increased migration while landholdings stayed in the family. Included as a mechanism check on tenure-security effects.','search','pending');
+  const r10=mk('Property Rights and Investment Incentives: Theory and Evidence from Ghana','T. Besley',1995,'Journal of Political Economy','10.1086/262008','Field-level evidence from Ghana linking transfer and security rights to investment in trees and land improvements. Added directly by DOI, bypassing screening (demonstrates the direct-add path).','manual','included');
+  R.push(r1,r2,r3,r4,r5,r6,r7,r8,r9,r10);
+  Object.assign(S,{
+    name:'Demo — Land titling & investment',
+    protocol:{question:'What is the effect of formal land titling on household investment?',
+      param:'effect of receiving a formal title/certificate on investment (pp or % change)',
+      esType:'raw', strategies:['rct','did','rdd','iv','other'], ymin:1995, ymax:2026, pubtype:'both',
+      journals:'', notes:'Exclude cross-country panels and purely descriptive studies.'},
+    prompt:'', records:R, log:[{ts:'2026-07-01T00:00:00Z',action:'demo.load',detail:'demo project seeded'}],
+    counters:{identified:38, dupes:7}
+  });
+  afterStateChange();
+}
+
+</script>
+<script>
+'use strict';
+/* ============================================================
+   MetaEcon — analysis engine, charts, PRISMA, exports
+   ============================================================ */
+
+/* ---------- meta-analysis math ---------- */
+function normP(z){ // two-sided p from |z|, Abramowitz-Stegun erfc approx
+  const t=1/(1+0.3275911*Math.abs(z)/Math.SQRT2);
+  const y=t*(0.254829592+t*(-0.284496736+t*(1.421413741+t*(-1.453152027+t*1.061405429))))*Math.exp(-z*z/2);
+  return Math.min(1, 2*y);
+}
+function analysisData(){
+  const which=document.getElementById('a-which').value;
+  const agg=document.getElementById('a-agg').value;
+  const trim=parseFloat(document.getElementById('a-trim').value);
+  let rows=allEstimates()
+    .filter(x=> which==='verified' ? x.e.verified : true)
+    .map(x=>({study:x.r.title, sid:x.r.id, strategy:x.e.strategy, y:num(x.e.coefficient), se:num(x.e.se)}))
+    .filter(d=>d.y!=null && d.se!=null && d.se>0);
+  if(trim>0 && rows.length>4){
+    const abs=rows.map(d=>Math.abs(d.y)).sort((a,b)=>a-b);
+    const cut=abs[Math.min(abs.length-1, Math.floor(abs.length*(1-trim)))];
+    rows=rows.map(d=>({...d, y: Math.sign(d.y)*Math.min(Math.abs(d.y), cut)}));
+  }
+  if(agg!=='none'){
+    const by={};
+    rows.forEach(d=>{ (by[d.sid]=by[d.sid]||[]).push(d); });
+    rows=Object.values(by).map(g=>{
+      const ys=g.map(d=>d.y).sort((a,b)=>a-b), ses=g.map(d=>d.se).sort((a,b)=>a-b);
+      const mid=(arr)=>arr.length%2? arr[(arr.length-1)/2] : (arr[arr.length/2-1]+arr[arr.length/2])/2;
+      return {...g[0],
+        y: agg==='mean'? ys.reduce((a,b)=>a+b,0)/ys.length : mid(ys),
+        se: agg==='mean'? ses.reduce((a,b)=>a+b,0)/ses.length : mid(ses), n:g.length};
+    });
+  }
+  return rows;
+}
+function pool(rows, method){
+  const k=rows.length;
+  if(!k) return null;
+  const w=rows.map(d=>1/(d.se*d.se));
+  const sw=w.reduce((a,b)=>a+b,0);
+  const fe=rows.reduce((a,d,i)=>a+w[i]*d.y,0)/sw;
+  const Q=rows.reduce((a,d,i)=>a+w[i]*(d.y-fe)*(d.y-fe),0);
+  const df=Math.max(k-1,1);
+  const C=sw - w.reduce((a,b)=>a+b*b,0)/sw;
+  const tau2=Math.max(0,(Q-df)/(C||1));
+  const I2=Q>0? Math.max(0,(Q-df)/Q) : 0;
+  let est=fe, se=Math.sqrt(1/sw);
+  if(method==='re'){
+    const wr=rows.map(d=>1/(d.se*d.se+tau2));
+    const swr=wr.reduce((a,b)=>a+b,0);
+    est=rows.reduce((a,d,i)=>a+wr[i]*d.y,0)/swr; se=Math.sqrt(1/swr);
+  }
+  return {k, est, se, lo:est-1.96*se, hi:est+1.96*se, Q, I2, tau2, p:normP(est/se)};
+}
+function fatpet(rows){ // WLS: y = b0 + b1*se, weights 1/se^2
+  const k=rows.length; if(k<3) return null;
+  let sw=0,sx=0,sy=0,sxx=0,sxy=0;
+  for(const d of rows){ const w=1/(d.se*d.se); sw+=w; sx+=w*d.se; sy+=w*d.y; sxx+=w*d.se*d.se; sxy+=w*d.se*d.y; }
+  const det=sw*sxx-sx*sx; if(Math.abs(det)<1e-12) return null;
+  const b1=(sw*sxy-sx*sy)/det, b0=(sy-b1*sx)/sw;
+  let rss=0; for(const d of rows){ const w=1/(d.se*d.se); const e=d.y-b0-b1*d.se; rss+=w*e*e; }
+  const s2=rss/(k-2);
+  const seb1=Math.sqrt(s2*sw/det), seb0=Math.sqrt(s2*sxx/det);
+  return {b0, seb0, b1, seb1, k, p0:normP(b0/seb0), p1:normP(b1/seb1)};
+}
+
+/* ---------- shared chart helpers ---------- */
+const TT=document.getElementById('tooltip');
+function tip(evt, html){ TT.innerHTML=html; TT.style.display='block';
+  TT.style.left=Math.min(innerWidth-330, evt.clientX+14)+'px'; TT.style.top=(evt.clientY+12)+'px'; }
+function untip(){ TT.style.display='none'; }
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function svgEl(w,h){ const s=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  s.setAttribute('viewBox',`0 0 ${w} ${h}`); s.setAttribute('width','100%'); s.style.maxWidth=w+'px'; return s; }
+function add(parent, tag, attrs, text){
+  const el=document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for(const [k,v] of Object.entries(attrs)) el.setAttribute(k, v);
+  if(text!=null) el.textContent=text;
+  parent.appendChild(el); return el;
+}
+function fmt(x, d){ return x==null||!isFinite(x)? '—' : x.toFixed(d==null?3:d); }
+
+/* ---------- 6 · analyze ---------- */
+function renderAnalyze(){ drawCharts(); }
+function drawCharts(){
+  if(CURRENT!=='analyze' && CURRENT!=='export'){ if(CURRENT!=='analyze') {} }
+  if(document.getElementById('stage-analyze').classList.contains('active')) drawAnalysis();
+  if(document.getElementById('stage-export').classList.contains('active')) drawPrisma();
+}
+function drawAnalysis(){
+  const rows=analysisData();
+  const method=document.getElementById('a-pool').value;
+  const P=pool(rows, method);
+  const tiles=document.getElementById('a-tiles');
+  if(!P){ tiles.innerHTML='<div class="tile"><div class="tl">No data</div><div class="ts">Verify estimates with both a coefficient and an SE, then return here.</div></div>';
+    document.getElementById('forest').innerHTML=''; document.getElementById('funnel').innerHTML='';
+    document.getElementById('fatpet').innerHTML='<p class="muted tiny">Needs ≥3 estimates.</p>';
+    document.getElementById('subgroup-card').style.display='none'; return; }
+  tiles.innerHTML=`
+    <div class="tile"><div class="tl">Pooled effect (${method==='re'?'RE':'FE'})</div><div class="tv">${fmt(P.est)}</div><div class="ts">95% CI [${fmt(P.lo)}, ${fmt(P.hi)}]</div></div>
+    <div class="tile"><div class="tl">Estimates</div><div class="tv">${P.k}</div><div class="ts">${new Set(rows.map(d=>d.sid)).size} studies</div></div>
+    <div class="tile"><div class="tl">I²</div><div class="tv">${(100*P.I2).toFixed(0)}%</div><div class="ts">heterogeneity beyond sampling</div></div>
+    <div class="tile"><div class="tl">τ²</div><div class="tv">${fmt(P.tau2,4)}</div><div class="ts">between-estimate variance</div></div>
+    <div class="tile"><div class="tl">p (pooled=0)</div><div class="tv">${P.p<0.001?'<0.001':fmt(P.p,3)}</div><div class="ts">two-sided</div></div>`;
+  drawForest(rows,P);
+  drawFunnel(rows,P);
+  drawFatpet(rows);
+  drawSubgroups(rows, method);
+}
+function drawForest(rows,P){
+  const box=document.getElementById('forest'); box.innerHTML='';
+  document.getElementById('forest-sub').textContent =
+    `${rows.length} estimates · marker size ∝ precision · diamond = pooled ${document.getElementById('a-pool').value==='re'?'random-effects':'fixed-effect'} estimate`;
+  const byStudy={};
+  rows.forEach(d=>{ (byStudy[d.study]=byStudy[d.study]||[]).push(d); });
+  const items=Object.entries(byStudy).flatMap(([s,g])=>g.map((d,i)=>({...d, label: i===0? s.slice(0,44) : ''})));
+  const rowH=20, mL=250, mR=110, W=860, plotW=W-mL-mR, H=items.length*rowH+70;
+  const lo=Math.min(...items.map(d=>d.y-1.96*d.se), P.lo, 0), hi=Math.max(...items.map(d=>d.y+1.96*d.se), P.hi, 0);
+  const pad=(hi-lo)*0.06, x=v=>mL+ (v-(lo-pad))/((hi+pad)-(lo-pad))*plotW;
+  const svg=svgEl(W,H); box.appendChild(svg);
+  const ink2=css('--ink2'), border=css('--border2'), acc=css('--accent');
+  add(svg,'line',{x1:x(0),y1:8,x2:x(0),y2:H-46,stroke:border,'stroke-dasharray':'3 3'});
+  items.forEach((d,i)=>{
+    const cy=18+i*rowH;
+    if(d.label) add(svg,'text',{x:6,y:cy+4,'font-size':11}, d.label);
+    add(svg,'line',{x1:x(d.y-1.96*d.se),y1:cy,x2:x(d.y+1.96*d.se),y2:cy,stroke:ink2,'stroke-width':1.4});
+    const r=Math.max(3, Math.min(8, 2.2/d.se));
+    const c=add(svg,'circle',{cx:x(d.y),cy, r, fill:acc});
+    add(svg,'text',{x:W-mR+8,y:cy+4,'font-size':11,class:'num'}, `${fmt(d.y)} (${fmt(d.se)})`);
+    const bg=add(svg,'rect',{x:mL,y:cy-rowH/2,width:plotW,height:rowH,fill:'transparent'});
+    [c,bg].forEach(el=>{
+      el.addEventListener('mousemove',e=>tip(e,`<b>${esc(d.study.slice(0,60))}</b><br>effect ${fmt(d.y)} · SE ${fmt(d.se)}<br>95% CI [${fmt(d.y-1.96*d.se)}, ${fmt(d.y+1.96*d.se)}]${d.n?` · ${d.n} estimates aggregated`:''}`));
+      el.addEventListener('mouseleave',untip);
+    });
+  });
+  const dy=18+items.length*rowH+6;
+  add(svg,'path',{d:`M ${x(P.lo)} ${dy} L ${x(P.est)} ${dy-7} L ${x(P.hi)} ${dy} L ${x(P.est)} ${dy+7} Z`, fill:acc});
+  add(svg,'text',{x:6,y:dy+4,'font-size':11,'font-weight':'700'}, 'Pooled');
+  add(svg,'text',{x:W-mR+8,y:dy+4,'font-size':11,class:'num','font-weight':'700'}, `${fmt(P.est)} [${fmt(P.lo)}, ${fmt(P.hi)}]`);
+  // axis
+  const ticks=5;
+  for(let i=0;i<=ticks;i++){ const v=(lo-pad)+i*((hi+pad)-(lo-pad))/ticks;
+    add(svg,'line',{x1:x(v),y1:H-40,x2:x(v),y2:H-36,stroke:ink2});
+    add(svg,'text',{x:x(v),y:H-24,'text-anchor':'middle','font-size':10,class:'num'}, v.toFixed(2)); }
+  add(svg,'text',{x:mL+plotW/2,y:H-8,'text-anchor':'middle','font-size':11}, 'effect size');
+}
+function drawFunnel(rows,P){
+  const box=document.getElementById('funnel'); box.innerHTML='';
+  const W=420,H=320,mL=52,mB=36,mT=12,mR=14;
+  const maxSe=Math.max(...rows.map(d=>d.se))*1.08;
+  const lo=Math.min(...rows.map(d=>d.y), P.est-1.96*maxSe), hi=Math.max(...rows.map(d=>d.y), P.est+1.96*maxSe);
+  const x=v=>mL+(v-lo)/(hi-lo)*(W-mL-mR), y=s=>mT+(s/maxSe)*(H-mT-mB);
+  const svg=svgEl(W,H); box.appendChild(svg);
+  const ink2=css('--ink2'), border=css('--border2'), acc=css('--accent');
+  // pseudo-CI funnel around pooled estimate
+  add(svg,'path',{d:`M ${x(P.est)} ${y(0)} L ${x(P.est-1.96*maxSe)} ${y(maxSe)} L ${x(P.est+1.96*maxSe)} ${y(maxSe)} Z`,
+    fill:acc,'fill-opacity':.07,stroke:border});
+  add(svg,'line',{x1:x(P.est),y1:y(0),x2:x(P.est),y2:y(maxSe),stroke:ink2,'stroke-dasharray':'3 3'});
+  rows.forEach(d=>{
+    const c=add(svg,'circle',{cx:x(d.y),cy:y(d.se),r:4,fill:acc,'fill-opacity':.75,stroke:css('--surface'),'stroke-width':1});
+    c.addEventListener('mousemove',e=>tip(e,`<b>${esc(d.study.slice(0,60))}</b><br>effect ${fmt(d.y)} · SE ${fmt(d.se)}`));
+    c.addEventListener('mouseleave',untip);
+  });
+  add(svg,'line',{x1:mL,y1:y(0),x2:mL,y2:H-mB,stroke:ink2});
+  add(svg,'line',{x1:mL,y1:H-mB,x2:W-mR,y2:H-mB,stroke:ink2});
+  add(svg,'text',{x:14,y:(H-mB+mT)/2,'font-size':10,transform:`rotate(-90 14 ${(H-mB+mT)/2})`,'text-anchor':'middle'},'standard error (0 at top)');
+  add(svg,'text',{x:(W+mL)/2,y:H-8,'text-anchor':'middle','font-size':11},'effect size');
+  for(let i=0;i<=4;i++){ const v=lo+i*(hi-lo)/4;
+    add(svg,'text',{x:x(v),y:H-mB+14,'text-anchor':'middle','font-size':9,class:'num'},v.toFixed(2)); }
+}
+function drawFatpet(rows){
+  const el=document.getElementById('fatpet');
+  const f=fatpet(rows);
+  if(!f){ el.innerHTML='<p class="muted tiny">Needs ≥3 estimates with SEs.</p>'; return; }
+  const sig=(p)=> p<0.01?'***':p<0.05?'**':p<0.1?'*':'';
+  el.innerHTML=`<div class="scrollx"><table>
+    <thead><tr><th></th><th>Coef.</th><th>SE</th><th>p</th><th>Reading</th></tr></thead><tbody>
+    <tr><td><b>β₁ (FAT — bias)</b></td><td class="num">${fmt(f.b1,3)}${sig(f.p1)}</td><td class="num">${fmt(f.seb1,3)}</td><td class="num">${f.p1<0.001?'<0.001':fmt(f.p1,3)}</td>
+      <td class="tiny">${f.p1<0.05?'funnel asymmetry — consistent with selective reporting':'no significant small-study asymmetry'}</td></tr>
+    <tr><td><b>β₀ (PET — corrected effect)</b></td><td class="num">${fmt(f.b0,3)}${sig(f.p0)}</td><td class="num">${fmt(f.seb0,3)}</td><td class="num">${f.p0<0.001?'<0.001':fmt(f.p0,3)}</td>
+      <td class="tiny">effect conditional on infinite precision</td></tr>
+    </tbody></table></div>
+    <p class="tiny muted">k = ${f.k}. Precision-weighted OLS; treat as diagnostic, not gospel — SEs here are not clustered by study.</p>`;
+}
+function drawSubgroups(rows, method){
+  const card=document.getElementById('subgroup-card');
+  if(document.getElementById('a-sub').value!=='strategy'){ card.style.display='none'; return; }
+  card.style.display='';
+  const tb=document.querySelector('#subgroup-table tbody'); tb.innerHTML='';
+  const by={};
+  rows.forEach(d=>{ (by[d.strategy]=by[d.strategy]||[]).push(d); });
+  for(const [k,g] of Object.entries(by)){
+    const P=pool(g, method); if(!P) continue;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${esc((STRATEGIES.find(s=>s[0]===k)||['','?'])[1])}</td><td class="num">${P.k}</td>
+      <td class="num">${fmt(P.est)}</td><td class="num">[${fmt(P.lo)}, ${fmt(P.hi)}]</td><td class="num">${(100*P.I2).toFixed(0)}%</td>`;
+    tb.appendChild(tr);
+  }
+}
+['a-which','a-agg','a-pool','a-sub','a-trim'].forEach(id=>
+  document.getElementById(id).addEventListener('change', ()=>{ logAct('analyze.config', id+'='+document.getElementById(id).value); drawAnalysis(); }));
+
+/* ---------- 7 · export ---------- */
+function renderExport(){
+  drawPrisma();
+  const tb=document.querySelector('#log-table tbody');
+  tb.innerHTML=S.log.slice().reverse().map(l=>
+    `<tr><td class="num tiny">${esc(l.ts.replace('T',' ').slice(0,19))}</td><td class="tiny"><b>${esc(l.action)}</b></td><td class="tiny">${esc(l.detail)}</td></tr>`).join('')
+    || '<tr><td colspan="3" class="muted">No actions logged yet.</td></tr>';
+}
+function csvCell(v){ v=String(v==null?'':v); return /[",\n]/.test(v)? '"'+v.replace(/"/g,'""')+'"' : v; }
+document.getElementById('btn-csv').addEventListener('click', ()=>{
+  const head=['study','authors','year','journal','doi','strategy','outcome','coefficient','se','t_stat','ci_low','ci_high','units','spec','sample','table_ref','confidence','verified','source','model','extracted_at'];
+  const lines=[head.join(',')];
+  for(const {e,r} of allEstimates())
+    lines.push([r.title,r.authors,r.year,r.journal,r.doi,e.strategy,e.outcome,e.coefficient,e.se,e.t_stat,e.ci_low,e.ci_high,e.units,e.spec,e.sample,e.table_ref,e.confidence,e.verified,e.source,e.model,e.ts].map(csvCell).join(','));
+  download('estimates.csv', lines.join('\n'), 'text/csv'); logAct('export.csv', lines.length-1+' rows');
+});
+document.getElementById('btn-log').addEventListener('click', ()=>{
+  download('provenance_log.csv', ['ts,action,detail',...S.log.map(l=>[l.ts,l.action,l.detail].map(csvCell).join(','))].join('\n'),'text/csv');
+});
+document.getElementById('btn-bib').addEventListener('click', ()=>{
+  const bib=S.records.filter(r=>r.screen==='included').map(r=>{
+    const key=(r.authors.split(',')[0]||'anon').split(' ').pop().toLowerCase()+(r.year||'');
+    return `@article{${key},\n  title = {${r.title}},\n  author = {${r.authors.replace(/, /g,' and ')}},\n  year = {${r.year||''}},\n  journal = {${r.journal}},\n  doi = {${r.doi}}\n}`;
+  }).join('\n\n');
+  download('review.bib', bib, 'text/plain'); logAct('export.bib','bibliography downloaded');
+});
+document.getElementById('btn-json').addEventListener('click', ()=>document.getElementById('btn-save').click());
+document.getElementById('btn-prisma-svg').addEventListener('click', ()=>{
+  const el=document.querySelector('#prisma-svg svg');
+  if(el) download('prisma_flow.svg', new XMLSerializer().serializeToString(el), 'image/svg+xml');
+});
+function drawPrisma(){
+  const c=counts(), box=document.getElementById('prisma-svg'); box.innerHTML='';
+  const W=640,H=430, svg=svgEl(W,H); box.appendChild(svg);
+  const ink=css('--ink'), ink2=css('--ink2'), border=css('--border2'), accS=css('--accent-soft'), acc=css('--accent'), surf=css('--surface2');
+  const bx=(x,y,w,h,title,val,hl)=>{
+    add(svg,'rect',{x,y,width:w,height:h,rx:8,fill:hl?accS:surf,stroke:hl?acc:border});
+    add(svg,'text',{x:x+w/2,y:y+20,'text-anchor':'middle','font-size':11,fill:ink2},title);
+    add(svg,'text',{x:x+w/2,y:y+40,'text-anchor':'middle','font-size':17,'font-weight':'700',fill:ink,class:'num'},String(val));
+  };
+  const ar=(x1,y1,x2,y2,label)=>{
+    add(svg,'line',{x1,y1,x2,y2,stroke:ink2,'marker-end':'url(#ah)'});
+    if(label) add(svg,'text',{x:(x1+x2)/2+8,y:(y1+y2)/2+4,'font-size':10,fill:ink2},label);
+  };
+  const defs=add(svg,'defs',{});
+  const m=add(defs,'marker',{id:'ah',markerWidth:'8',markerHeight:'8',refX:'7',refY:'3',orient:'auto'});
+  add(m,'path',{d:'M0,0 L7,3 L0,6 Z',fill:ink2});
+  bx(30,14,260,52,'Records identified (search + snowball)', c.identified);
+  bx(360,14,250,52,'Duplicates removed', c.dupes);
+  ar(160,66,160,96);
+  bx(30,96,260,52,'Screened (title/abstract)', c.screened);
+  bx(360,96,250,52,'Excluded, by reason', c.excluded);
+  ar(290,122,360,122);
+  ar(160,148,160,178);
+  bx(30,178,260,52,'Included after screening', c.included - c.manual);
+  bx(360,178,250,52,'Added directly (screening bypassed)', c.manual);
+  ar(485,230,300,262);
+  ar(160,230,160,262);
+  bx(30,262,260,52,'Full text retrieved', c.withText, false);
+  ar(160,314,160,344);
+  bx(30,344,260,52,'Studies in synthesis (≥1 verified estimate)', c.synthesized, true);
+  bx(360,344,250,52,'Verified estimates', c.nVerified, true);
+  ar(290,370,360,370);
+  // excluded-reason breakdown
+  const reasons={};
+  S.records.filter(r=>r.screen==='excluded').forEach(r=>reasons[r.excludeReason||'Other']=(reasons[r.excludeReason||'Other']||0)+1);
+  let ry=160;
+  add(svg,'text',{x:370,y:ry-4,'font-size':10,fill:ink2}, Object.entries(reasons).map(([k,v])=>`${k}: ${v}`).join(' · ').slice(0,60));
+}
+
+</script>
+</body>
+</html>
