@@ -48,7 +48,7 @@ instead of re-reading every paper. It is not unattended extraction.
 - **Hosted:** the GitHub Pages URL of this repo — live OpenAlex search and
   Claude extraction both work there.
 - **Local:** double-click `start-metaecon.bat` (Windows) or run
-  `python -m http.server` in this folder and open http://127.0.0.1:8877.
+  `python -m http.server 8877` in this folder and open http://127.0.0.1:8877.
 
 Your API key stays in the browser (session storage unless you tick "remember");
 projects live in localStorage and in the JSON file you export.
