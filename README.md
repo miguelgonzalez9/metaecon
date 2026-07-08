@@ -49,6 +49,12 @@ instead of re-reading every paper. It is not unattended extraction.
   Claude extraction both work there.
 - **Local:** double-click `start-metaecon.bat` (Windows) or run
   `python -m http.server 8877` in this folder and open http://127.0.0.1:8877.
+- **Power mode (project switcher, disk storage, database sync):** this app is
+  developed inside a private living-literature-database repo where a local
+  backend (`app/server.py`) stores multiple review projects on disk and syncs
+  adjudicated estimates into a SQLite literature database. On this static
+  mirror the app runs in single-project localStorage mode.
+  `python -m http.server 8877` in this folder and open http://127.0.0.1:8877.
 
 Your API key stays in the browser (session storage unless you tick "remember");
 projects live in localStorage and in the JSON file you export.

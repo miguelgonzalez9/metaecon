@@ -158,6 +158,8 @@ details.adv summary{cursor:pointer;color:var(--ink2);font-size:12px;font-weight:
 <body>
 <div id="topbar">
   <div id="brand">MetaEcon<small>meta-analysis workbench</small></div>
+  <select id="projsel" style="display:none;max-width:210px" title="Switch review project" aria-label="Review project"></select>
+  <button class="quiet" id="btn-newproj" style="display:none" title="Create a new review project">＋&nbsp;New</button>
   <input id="projname" value="Untitled review" aria-label="Project name">
   <div id="prisma-mini"></div>
   <span id="savestate" class="tiny" style="color:var(--good);min-width:58px" role="status"></span>
@@ -400,6 +402,18 @@ details.adv summary{cursor:pointer;color:var(--ink2);font-size:12px;font-weight:
     <button id="btn-log">Provenance log (CSV)</button>
   </div>
 </div>
+<div class="card" id="sync-card" style="display:none"><h3>Sync to literature_db</h3>
+  <p class="tiny muted" style="margin-top:0">Pushes every included study with at least one <b>verified</b> estimate into the
+  living literature database, tagged <span class="num" id="sync-tag"></span>. New papers enter through the canonical ingest
+  (stable uid, write-once summary stub); papers already in the database keep their existing record and only gain the review's
+  new estimates and tags. The git-tracked JSONL mirror and cards are refreshed afterwards.</p>
+  <div class="row">
+    <button class="primary" id="btn-sync">Sync now</button>
+    <button class="quiet" id="btn-delproj" title="Move this review project to the trash folder">Delete project…</button>
+    <span class="tiny muted" id="sync-status"></span>
+  </div>
+  <div id="sync-report" style="margin-top:10px"></div>
+</div>
 <div class="chartbox"><h3>PRISMA flow</h3><div class="sub">Counts update live from the corpus</div><div id="prisma-svg" style="max-width:640px"></div></div>
 <div class="card"><h3>Provenance log</h3><div class="scrollx" style="max-height:300px;overflow-y:auto"><table id="log-table"><thead><tr><th>When</th><th>Action</th><th>Detail</th></tr></thead><tbody></tbody></table></div></div>
 </section>
@@ -458,15 +472,24 @@ const VALIDATION = {
   note: 'Precision reads low by construction: the pipeline extracts every reported specification (plus deterministic reciprocal conversions for inverse-form parameters), while the meta-analysts coded a curated subset — unmatched extractions are mostly real estimates outside the authors’ coding scope, not hallucinations. Five of the nine benchmark PDFs were scanned images read by vision; per-study tuple accuracy was 100% on seven studies, 98% and 59/60 on the other two.'
 };
 
-const S = {
-  name: 'Untitled review',
-  protocol: { question:'', param:'', esType:'raw', strategies:['rct','did','rdd','iv','shift'],
-              ymin:1990, ymax:2026, pubtype:'both', journals:'', notes:'' },
-  prompt: '',          // extraction instructions (regenerable from protocol)
-  records: [],         // the corpus
-  log: [],             // provenance entries {ts, action, detail}
-  counters: { identified:0, dupes:0 } // search-side PRISMA tallies
-};
+function blankProject(name){
+  return {
+    name: name || 'Untitled review',
+    protocol: { question:'', param:'', esType:'raw', strategies:['rct','did','rdd','iv','shift'],
+                ymin:1990, ymax:2026, pubtype:'both', journals:'', notes:'' },
+    prompt: '',          // extraction instructions (regenerable from protocol)
+    records: [],         // the corpus
+    log: [],             // provenance entries {ts, action, detail}
+    counters: { identified:0, dupes:0 } // search-side PRISMA tallies
+  };
+}
+let S = blankProject();
+/* When served by app/server.py, projects live as reviews/<key>.json inside the
+   literature_db repo (BACKEND mode). Otherwise (GitHub Pages, artifact, file://)
+   everything falls back to the original single-project localStorage behavior. */
+let BACKEND = false;   // set by boot() if /api/ping answers
+let PROJ_KEY = null;   // current review key in BACKEND mode
+let PROJECTS = [];     // switcher inventory
 let API_KEY = sessionStorage.getItem('metaecon_key') || localStorage.getItem('metaecon_key') || '';
 
 function uid(){ return 'r' + Math.random().toString(36).slice(2,9); }
@@ -477,13 +500,29 @@ function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg
 
 /* ---------- persistence ---------- */
 function persist(){
-  try{ localStorage.setItem('metaecon_project', JSON.stringify(S)); flashSaved(); }
+  if(BACKEND && PROJ_KEY){ schedulePush(); return; }
+  try{ localStorage.setItem('metaecon_project', JSON.stringify(S)); flashSaved('Saved ✓'); }
   catch(e){ /* quota: PDFs can be big */ }
 }
-function flashSaved(){
+function schedulePush(){  // debounced server save; every click/search lands here
+  clearTimeout(schedulePush._h);
+  flashSaved('Saving…');
+  schedulePush._h = setTimeout(async ()=>{
+    try{
+      const r = await fetch('/api/projects/'+PROJ_KEY, {method:'PUT',
+        headers:{'content-type':'application/json'}, body: JSON.stringify(S)});
+      flashSaved(r.ok ? 'Saved ✓' : 'SAVE FAILED');
+      if(!r.ok) toast('Server save failed — export a project JSON as backup');
+    }catch(e){ flashSaved('SAVE FAILED'); }
+  }, 700);
+}
+function flashSaved(msg){
   const el=document.getElementById('savestate'); if(!el) return;
-  el.textContent='Saved ✓';
-  clearTimeout(flashSaved._h); flashSaved._h=setTimeout(()=>el.textContent='', 1600);
+  el.textContent=msg||'Saved ✓';
+  el.style.color = /FAIL/.test(el.textContent)? 'var(--crit)' : 'var(--good)';
+  clearTimeout(flashSaved._h);
+  if(!/Saving|FAIL/.test(el.textContent))
+    flashSaved._h=setTimeout(()=>el.textContent='', 1600);
 }
 function restore(){
   try{
@@ -491,6 +530,47 @@ function restore(){
     if(raw){ const obj = JSON.parse(raw); Object.assign(S, obj); }
   }catch(e){}
 }
+
+/* ---------- BACKEND project management ---------- */
+async function refreshProjects(){
+  PROJECTS = await fetch('/api/projects').then(r=>r.json());
+  const sel=document.getElementById('projsel');
+  sel.innerHTML = PROJECTS.map(p=>
+    `<option value="${esc(p.key)}" ${p.key===PROJ_KEY?'selected':''}>${esc(p.name)} (${p.nVerified}/${p.nEstimates} est)</option>`).join('');
+}
+async function openProject(key){
+  const obj = await fetch('/api/projects/'+key).then(r=>{ if(!r.ok) throw new Error('project not found'); return r.json(); });
+  S = Object.assign(blankProject(), obj);
+  PROJ_KEY = key;
+  localStorage.setItem('metaecon_lastkey', key);
+  await refreshProjects();
+  afterStateChange();
+}
+async function saveProjectAs(key, obj){
+  const r = await fetch('/api/projects/'+key, {method:'PUT',
+    headers:{'content-type':'application/json'}, body: JSON.stringify(obj)});
+  if(!r.ok) throw new Error('save failed');
+}
+function newKey(base){
+  const keys = new Set(PROJECTS.map(p=>p.key));
+  let k = (base||'review').toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'') || 'review';
+  if(!keys.has(k)) return k;
+  let i=2; while(keys.has(k+'-'+i)) i++;
+  return k+'-'+i;
+}
+document.getElementById('projsel').addEventListener('change', async e=>{
+  await openProject(e.target.value);
+  nav(S.records.length ? 'screen' : 'protocol');
+});
+document.getElementById('btn-newproj').addEventListener('click', async ()=>{
+  const key = newKey('review');
+  await saveProjectAs(key, blankProject('New review — rename me'));
+  await openProject(key);
+  logAct('project.new', key);
+  nav('protocol');
+  toast('New project created — set its name in the top bar');
+  document.getElementById('projname').focus();
+});
 
 /* ---------- navigation ---------- */
 let CURRENT = 'protocol';
@@ -566,7 +646,19 @@ function counts(){
     synthesized: included.filter(x=>x.estimates.some(e=>e.verified)).length
   };
 }
-function hasSource(rec){ return !!(rec.fullText || rec.pdfB64); }
+function hasSource(rec){ return !!(rec.fullText || rec.pdfB64 || rec.pdfStored); }
+async function pdfBase64(rec){  // resolve a record's PDF to base64 (server-stored or in-state)
+  if(rec.pdfB64) return rec.pdfB64;
+  if(BACKEND && rec.pdfStored){
+    const res = await fetch(`/api/pdf/${PROJ_KEY}/${rec.id}`);
+    if(!res.ok) throw new Error('stored PDF not found on server');
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    let bin=''; const CH=0x8000;
+    for(let i=0;i<bytes.length;i+=CH) bin += String.fromCharCode.apply(null, bytes.subarray(i,i+CH));
+    return btoa(bin);
+  }
+  return '';
+}
 function num(v){ const x = parseFloat(String(v==null?'':v).replace(/[^0-9eE+.\-]/g,'')); return isFinite(x)? x : null; }
 
 function renderBadges(){
@@ -630,7 +722,10 @@ document.getElementById('btn-load').addEventListener('click', ()=>{
   };
   inp.click();
 });
-document.getElementById('projname').addEventListener('change', e=>{ S.name = e.target.value; persist(); });
+document.getElementById('projname').addEventListener('change', e=>{
+  S.name = e.target.value; persist();
+  if(BACKEND) setTimeout(refreshProjects, 900);  // update the switcher label after the save lands
+});
 
 function afterStateChange(){
   document.getElementById('projname').value = S.name;
@@ -668,8 +763,21 @@ document.getElementById('btn-val').addEventListener('click', ()=>{
 });
 
 /* ---------- boot (deferred until all scripts are parsed) ---------- */
-window.addEventListener('DOMContentLoaded', ()=>{
-  restore();
+window.addEventListener('DOMContentLoaded', async ()=>{
+  try{
+    const r = await fetch('/api/ping', {cache:'no-store'});
+    if(r.ok){ const info = await r.json(); BACKEND = !!info.ok; window.LIT_INFO = info; }
+  }catch(e){ /* static hosting — localStorage mode */ }
+  if(BACKEND){
+    ['projsel','btn-newproj'].forEach(id=>document.getElementById(id).style.display='');
+    await refreshProjects();
+    const last = localStorage.getItem('metaecon_lastkey');
+    let key = PROJECTS.some(p=>p.key===last) ? last : (PROJECTS[0] && PROJECTS[0].key);
+    if(!key){ key='untitled'; await saveProjectAs(key, blankProject()); }
+    await openProject(key);
+  } else {
+    restore();
+  }
   afterStateChange();
   renderValidation();
   nav(S.records.length ? 'screen' : 'protocol');
@@ -1026,7 +1134,7 @@ function renderRetrieve(){
       : r.oaStatus==='landing' ? `<span class="chip warn" title="A free web page exists but no direct PDF — open it, save the PDF, upload it here">web page only</span>`
       : r.oaStatus==='none' ? `<span class="chip crit" title="No free copy found — get it via your library access and upload it">paywalled</span>`
       : `<span class="chip" title="Click 'Check open access' above">not checked</span>`;
-    const ft = r.pdfB64 ? `<span class="chip good">PDF: ${esc(r.pdfName)}</span>`
+    const ft = (r.pdfB64||r.pdfStored) ? `<span class="chip good">PDF: ${esc(r.pdfName||'stored')}</span>`
       : r.fullText ? `<span class="chip good">pasted text (${(r.fullText.length/1000).toFixed(0)}k chars)</span>`
       : `<span class="chip ${r.oaStatus==='none'?'crit':''} gap">missing — fill the gap</span>`;
     tr.innerHTML=`
@@ -1040,8 +1148,19 @@ function renderRetrieve(){
       </td>`;
     tr.querySelector('[data-a="pdf"]').addEventListener('click',()=>{
       const inp=document.createElement('input'); inp.type='file'; inp.accept='.pdf';
-      inp.onchange=()=>{ const f=inp.files[0]; if(!f) return;
-        if(f.size> 18*1024*1024){ toast('PDF too large (18 MB max in-browser)'); return; }
+      inp.onchange=async ()=>{ const f=inp.files[0]; if(!f) return;
+        if(f.size> (BACKEND? 30:18)*1024*1024){ toast('PDF too large'); return; }
+        if(BACKEND){
+          // PDFs live on disk under reviews/pdfs/<project>/ — no browser quota limits
+          try{
+            const res = await fetch(`/api/pdf/${PROJ_KEY}/${r.id}`, {method:'PUT', body: f});
+            if(!res.ok) throw new Error((await res.json()).error||res.status);
+            r.pdfStored=true; r.pdfB64=''; r.pdfName=f.name;
+            logAct('retrieve.upload', r.title+' ← '+f.name+' (server)');
+            afterStateChange(); renderRetrieve();
+          }catch(e){ toast('Upload failed: '+e.message); }
+          return;
+        }
         const rd=new FileReader();
         rd.onload=()=>{ r.pdfB64=String(rd.result).split(',')[1]; r.pdfName=f.name;
           logAct('retrieve.upload', r.title+' ← '+f.name); afterStateChange(); renderRetrieve(); };
@@ -1117,9 +1236,10 @@ const EST_SCHEMA = {type:'object',required:['estimates'],properties:{
 async function extractOne(r){
   const model=document.getElementById('x-model').value;
   const content=[];
-  if(r.pdfB64) content.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:r.pdfB64}});
+  const b64 = await pdfBase64(r);
+  if(b64) content.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}});
   const promptTxt=(S.prompt||defaultPrompt()) + `\n\nPaper: ${r.title} (${r.authors}, ${r.year||'n.d.'})` +
-    (r.pdfB64? '' : `\n\nFULL TEXT:\n${r.fullText.slice(0, 350000)}`);
+    (b64? '' : `\n\nFULL TEXT:\n${r.fullText.slice(0, 350000)}`);
   content.push({type:'text',text:promptTxt});
   const resp=await claude({ model, max_tokens: 16000,
     tools:[{name:'record_estimates',description:'Structured estimates extracted from the paper',input_schema:EST_SCHEMA}],
@@ -1273,7 +1393,14 @@ document.getElementById('btn-verify-high').addEventListener('click',()=>{
 });
 
 /* ---------- demo project ---------- */
-document.getElementById('btn-demo').addEventListener('click', ()=>{
+document.getElementById('btn-demo').addEventListener('click', async ()=>{
+  if(BACKEND){
+    // the demo gets its own project slot — it never clobbers your real reviews
+    PROJ_KEY='demo'; localStorage.setItem('metaecon_lastkey','demo');
+    loadDemo(); await refreshProjects();
+    nav('screen'); toast('Demo opened as its own project — your other reviews are untouched');
+    return;
+  }
   if(S.records.length && !confirm('Replace the current project with the demo?')) return;
   loadDemo(); nav('screen'); toast('Demo project loaded — walk the stages left to right');
 });
@@ -1527,6 +1654,8 @@ function drawSubgroups(rows, method){
 /* ---------- 7 · export ---------- */
 function renderExport(){
   drawPrisma();
+  document.getElementById('sync-card').style.display = BACKEND? '' : 'none';
+  if(BACKEND) document.getElementById('sync-tag').textContent = 'review/'+PROJ_KEY;
   const tb=document.querySelector('#log-table tbody');
   tb.innerHTML=S.log.slice().reverse().map(l=>
     `<tr><td class="num tiny">${esc(l.ts.replace('T',' ').slice(0,19))}</td><td class="tiny"><b>${esc(l.action)}</b></td><td class="tiny">${esc(l.detail)}</td></tr>`).join('')
@@ -1554,6 +1683,37 @@ document.getElementById('btn-json').addEventListener('click', ()=>document.getEl
 document.getElementById('btn-prisma-svg').addEventListener('click', ()=>{
   const el=document.querySelector('#prisma-svg svg');
   if(el) download('prisma_flow.svg', new XMLSerializer().serializeToString(el), 'image/svg+xml');
+});
+/* ---------- sync to literature_db (BACKEND mode) ---------- */
+document.getElementById('btn-sync').addEventListener('click', async ()=>{
+  const st=document.getElementById('sync-status'), rep=document.getElementById('sync-report');
+  const c=counts();
+  if(!c.nVerified){ st.textContent='Nothing to sync — verify estimates in Adjudicate first.'; return; }
+  st.textContent='Syncing… (canonical ingest per new paper; can take ~1 min)';
+  rep.innerHTML='';
+  try{
+    // push the latest state first so the server syncs exactly what you see
+    await saveProjectAs(PROJ_KEY, S);
+    const r = await fetch('/api/sync/'+PROJ_KEY, {method:'POST'});
+    const out = await r.json();
+    if(!r.ok) throw new Error(out.error||('HTTP '+r.status));
+    st.textContent = `Done: ${out.synced.length} paper(s) synced as ${out.tag}` +
+      (out.exported? ' · JSONL mirror + cards refreshed.' : ' · WARNING: mirror refresh failed.');
+    rep.innerHTML = `<div class="scrollx"><table><thead><tr><th>Paper</th><th>uid</th><th>Action</th><th>New estimates</th></tr></thead><tbody>`+
+      out.synced.map(s=>`<tr><td style="max-width:320px">${esc(s.title)}</td><td class="num tiny">${esc(s.uid||'')}</td>
+        <td><span class="chip ${s.action==='appended'?'acc':'good'} tiny">${esc(s.action)}</span></td>
+        <td class="num">${s.n_new_estimates}</td></tr>`).join('')+
+      `</tbody></table></div>`+
+      (out.errors.length? `<p class="tiny" style="color:var(--crit)">Errors: ${out.errors.map(e=>esc(e.title+': '+e.error)).join(' · ')}</p>` : '');
+    logAct('sync.litdb', `${out.synced.length} papers -> ${out.tag}`);
+  }catch(e){ st.textContent='Sync failed: '+e.message; }
+});
+document.getElementById('btn-delproj').addEventListener('click', async ()=>{
+  if(!BACKEND) return;
+  if(!confirm(`Move project "${S.name}" to the trash folder? (recoverable from reviews/.trash/)`)) return;
+  await fetch('/api/projects/'+PROJ_KEY, {method:'DELETE'});
+  localStorage.removeItem('metaecon_lastkey');
+  location.reload();
 });
 function drawPrisma(){
   const c=counts(), box=document.getElementById('prisma-svg'); box.innerHTML='';
